@@ -93,10 +93,19 @@ def main():
     print(f"{Colors.OKBLUE}Pushing to remote...{Colors.ENDC}")
     code, push_out = run_command("git push")
     
+    if code != 0 and "has no upstream branch" in push_out:
+        print(f"{Colors.WARNING}No upstream branch detected. Attempting to set upstream automatically...{Colors.ENDC}")
+        # Get the current branch name
+        branch_code, branch_out = run_command("git rev-parse --abbrev-ref HEAD", show_output=False)
+        current_branch = branch_out.strip()
+        
+        if current_branch:
+            code, push_out = run_command(f"git push --set-upstream origin {current_branch}")
+
     if code == 0:
         print(f"{Colors.OKGREEN}{Colors.BOLD}Successfully pushed changes!{Colors.ENDC}")
     else:
-        print(f"{Colors.FAIL}Push failed. You may need to pull first or set upstream.{Colors.ENDC}")
+        print(f"{Colors.FAIL}Push failed. Please ensure you have added a remote repository (git remote add origin <URL>).{Colors.ENDC}")
         sys.exit(1)
 
 if __name__ == "__main__":
