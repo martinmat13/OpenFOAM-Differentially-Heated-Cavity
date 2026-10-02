@@ -16,11 +16,6 @@ command -v blockMesh >/dev/null || {
 echo "=== Mesh generation ==="
 blockMesh -case case
 
-echo "=== Solver ==="
-# Replace this with the selected solver:
-# buoyantBoussinesqSimpleFoam -case case
-
-echo "Solver command intentionally left project-specific."
-echo "Edit scripts/run.sh after configuring the case."
+buoyantBoussinesqSimpleFoam -case case
 
 echo "=== Finished ==="

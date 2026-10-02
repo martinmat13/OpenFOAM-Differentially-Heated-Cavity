@@ -10,45 +10,43 @@
 - **Author:** Martin Mathew
 - **Started:** 2026-10-02
 - **Solver:** `buoyantBoussinesqSimpleFoam`
-- **OpenFOAM version:** `TBD`
+- **OpenFOAM version:** `OpenFOAM-v2512`
 - **Physics:** Natural Convection, Buoyancy, Heat Transfer
 
 ---
 
 ## 1. Engineering Question
 
-> [Define the scientific or engineering question.]
+> **How effectively can buoyancy-driven natural convection transfer heat across a closed air cavity?**
 
 **Why does this matter?**
 
-[Explain the engineering relevance.]
+Differentially Heated Cavity (DHC) flows are ubiquitous in engineering. They model everything from double-glazing in energy-efficient windows, cooling of electronic components in sealed enclosures, to large-scale atmospheric and oceanic circulation. Understanding and accurately predicting the heat transfer coefficient (Nusselt number) under natural convection is a fundamental requirement for thermal management design.
 
 ---
 
 ## 2. Objectives
 
-1. Develop the OpenFOAM model.
-2. Define physically justified boundary and initial conditions.
-3. Establish numerical convergence.
-4. Perform mesh-independence testing.
-5. Perform timestep sensitivity where applicable.
-6. Calculate engineering quantities.
-7. Validate against literature or experimental data.
-8. Quantify numerical error.
-9. Perform a controlled parameter study.
-10. Document limitations and engineering conclusions.
+1. Develop the OpenFOAM model using `buoyantBoussinesqSimpleFoam`.
+2. Define physically justified boundary and initial conditions for the classic benchmark problem.
+3. Establish numerical convergence for the coupled velocity-temperature fields.
+4. Perform mesh-independence testing (specifically resolving wall boundary layers).
+5. Calculate engineering quantities (e.g. wall heat flux and Nusselt number).
+6. Validate against literature (e.g. De Vahl Davis 1983 benchmark).
+7. Quantify numerical error and identify the transition to unsteady flows at high Rayleigh numbers.
+8. Perform a controlled parameter study on the Rayleigh number.
 
 ---
 
 ## 3. Physics
 
-**Physics included:** Natural Convection, Buoyancy, Heat Transfer
+**Physics included:** Natural Convection, Buoyancy (Boussinesq Approximation), Heat Transfer, Fluid Dynamics.
 
 **Assumptions**
-
-- [Assumption 1]
-- [Assumption 2]
-- [Assumption 3]
+- Flow is steady and two-dimensional (at low/moderate Rayleigh numbers).
+- Fluid is incompressible, but density variations are retained in the gravity term (Boussinesq approximation).
+- Viscous dissipation in the energy equation is negligible.
+- Radiation is ignored (purely convective/conductive heat transfer).
 
 ---
 

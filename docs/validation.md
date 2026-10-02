@@ -2,19 +2,25 @@
 
 ## 1. Reference Case
 
-**Reference:** [Paper / experiment / benchmark]
+## 1. Reference Case
 
-**Reference geometry:** [Description]
+**Reference:** De Vahl Davis, G. (1983). "Natural convection of air in a square cavity: a bench mark numerical solution". *International Journal for Numerical Methods in Fluids*, 3(3), 249-264.
 
-**Reference conditions:** [Description]
+**Reference geometry:** 2D Square Cavity (H = W)
+
+**Reference conditions:** 
+- Adiabatic top and bottom walls
+- Isothermal vertical walls at $T_H$ and $T_C$
+- Prandtl number ($Pr$) = 0.71 (Air)
+- Rayleigh numbers ($Ra$) = $10^3, 10^4, 10^5, 10^6$
 
 ## 2. Validation Quantities
 
 | Quantity | CFD | Reference | Absolute error | Relative error |
 |---|---:|---:|---:|---:|
-| Quantity 1 | TBD | TBD | TBD | TBD |
-| Quantity 2 | TBD | TBD | TBD | TBD |
-| Quantity 3 | TBD | TBD | TBD | TBD |
+| Max vertical velocity ($U_{y, max}$) on mid-plane $y=0.5$ | TBD | TBD | TBD | TBD |
+| Max horizontal velocity ($U_{x, max}$) on mid-plane $x=0.5$ | TBD | TBD | TBD | TBD |
+| Average Nusselt number ($\overline{Nu}$) | TBD | TBD | TBD | TBD |
 
 ## 3. Error Definition
 
