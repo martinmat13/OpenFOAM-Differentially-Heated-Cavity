@@ -35,9 +35,9 @@ $$ Ra = Gr \cdot Pr = \frac{g \beta (T_H - T_C) L^3}{\nu \alpha} $$
 
 where:
 - $g$: Acceleration due to gravity ($m/s^2$)
-- $\beta$: Thermal expansion coefficient [$1/K$]. This dictates how much the fluid expands when heated. For an ideal gas, $\beta \approx 1/T_{ref}$.
-- $\nu$: Kinematic viscosity [$\mu / \rho$, $m^2/s$]. Represents the fluid's resistance to flow.
-- $\alpha$: Thermal diffusivity [$k / (\rho C_p)$, $m^2/s$]. Represents how fast heat can spread through the fluid bulk.
+- $\beta$: Thermal expansion coefficient ($1/K$). This dictates how much the fluid expands when heated. For an ideal gas, $\beta \approx 1/T_{ref}$.
+- $\nu$: Kinematic viscosity ($\mu / \rho$, $m^2/s$). Represents the fluid's resistance to flow.
+- $\alpha$: Thermal diffusivity ($k / (\rho C_p)$, $m^2/s$). Represents how fast heat can spread through the fluid bulk.
 
 **Physical meaning in reality:** 
 - **Low $Ra$ ($&lt; 10^3$):** Buoyancy is too weak to overcome viscosity and thermal diffusion. The fluid is practically stationary, and heat transfers primarily via **pure conduction**, just like a solid block.
@@ -60,7 +60,7 @@ Instead of solving the fully compressible Navier-Stokes equations, which is comp
 
 1. Density variations are neglected in all equations except in the buoyancy/gravity term of the momentum equation.
 2. The fluid density $\rho$ is assumed to vary linearly with temperature:
-   $$ \rho = \rho_{ref} [1 - \beta (T - T_{ref})] $$
+   $$ \rho = \rho_{ref} (1 - \beta (T - T_{ref})) $$
 
 By substituting this into the gravity term, the momentum equation incorporates buoyancy as a linear source term driven by local temperature differences:
 $$ \vec{F}_{buoyancy} = - \rho_{ref} \vec{g} \beta (T - T_{ref}) $$
