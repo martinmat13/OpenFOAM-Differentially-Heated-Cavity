@@ -15,7 +15,7 @@ The Rayleigh number is the primary driving parameter in natural convection, expr
 $$ Ra = \frac{g \beta (T_H - T_C) L^3}{\nu \alpha} = \frac{g \beta \Delta T L^3 Pr}{\nu^2} $$
 
 where:
-- $g$: Acceleration due to gravity $m/s^2$
+- $g$: Acceleration due to gravity ($m/s^2$)
 - $\beta$: Thermal expansion coefficient [$1/K$]
 - $\Delta T$: Temperature difference ($T_H - T_C$) [$K$]
 - $L$: Characteristic length (cavity width) [$m$]
