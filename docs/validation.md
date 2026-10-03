@@ -10,17 +10,17 @@
 
 **Reference conditions:** 
 - Adiabatic top and bottom walls
-- Isothermal vertical walls at $T_H$ and $T_C$
-- Prandtl number ($Pr$) = 0.71 (Air)
-- Rayleigh numbers ($Ra$) = $10^3, 10^4, 10^5, 10^6$
+- Isothermal vertical walls at \(T_H\) and \(T_C\)
+- Prandtl number (\(Pr\)) = 0.71 (Air)
+- Rayleigh numbers (\(Ra\)) = \(10^3, 10^4, 10^5, 10^6\)
 
 ## 2. Validation Quantities
 
 | Quantity | CFD | Reference | Absolute error | Relative error |
 |---|---:|---:|---:|---:|
-| Max vertical velocity ($U_{y, max}$) on mid-plane $y=0.5$ | TBD | TBD | TBD | TBD |
-| Max horizontal velocity ($U_{x, max}$) on mid-plane $x=0.5$ | TBD | TBD | TBD | TBD |
-| Average Nusselt number ($\overline{Nu}$) | TBD | TBD | TBD | TBD |
+| Max vertical velocity (\(U_{y, max}\)) on mid-plane \(y=0.5\) | TBD | TBD | TBD | TBD |
+| Max horizontal velocity (\(U_{x, max}\)) on mid-plane \(x=0.5\) | TBD | TBD | TBD | TBD |
+| Average Nusselt number (\(\overline{Nu}\)) | TBD | TBD | TBD | TBD |
 
 ## 3. Error Definition
 
