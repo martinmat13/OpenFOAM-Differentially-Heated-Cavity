@@ -1,0 +1,32 @@
+{
+  "references": [
+    {
+      "author": "De Vahl Davis",
+      "year": 1983,
+      "title": "Natural Convection of Air in a Square Cavity: A Bench Mark Numerical Solution",
+      "data": [
+        {"Ra": 1e3, "Nu_avg": 1.118, "u_max_dimless": 3.649, "v_max_dimless": 3.697},
+        {"Ra": 1e4, "Nu_avg": 2.243, "u_max_dimless": 16.178, "v_max_dimless": 19.617},
+        {"Ra": 1e5, "Nu_avg": 4.519, "u_max_dimless": 34.73, "v_max_dimless": 68.59},
+        {"Ra": 1e6, "Nu_avg": 8.800, "u_max_dimless": 64.63, "v_max_dimless": 219.36}
+      ]
+    },
+    {
+      "author": "Le Quere",
+      "year": 1991,
+      "title": "Accurate solutions to the square thermally driven cavity at high Rayleigh number",
+      "data": [
+        {"Ra": 1e7, "Nu_avg": 16.523, "u_max_dimless": 148.58, "v_max_dimless": 699.18},
+        {"Ra": 1e8, "Nu_avg": 30.225, "u_max_dimless": 321.88, "v_max_dimless": 2222.39}
+      ]
+    },
+    {
+      "author": "Dixit and Babu",
+      "year": 2006,
+      "title": "Simulation of high Rayleigh number natural convection in a square cavity using the lattice Boltzmann method",
+      "data": [
+        {"Ra": 1e9, "Nu_avg": 54.48, "u_max_dimless": null, "v_max_dimless": null}
+      ]
+    }
+  ]
+}

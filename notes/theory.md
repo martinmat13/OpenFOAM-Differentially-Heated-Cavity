@@ -60,7 +60,7 @@ Instead of solving the fully compressible Navier-Stokes equations, which is comp
 
 1. Density variations are neglected in all equations except in the buoyancy/gravity term of the momentum equation.
 2. The fluid density $\rho$ is assumed to vary linearly with temperature:
-   $$ \rho = \rho_{ref} (1 - \beta (T - T_{ref})) $$
+$$ \rho = \rho_{ref} (1 - \beta (T - T_{ref})) $$
 
 By substituting this into the gravity term, the momentum equation incorporates buoyancy as a linear source term driven by local temperature differences:
 $$ \vec{F}_{buoyancy} = - \rho_{ref} \vec{g} \beta (T - T_{ref}) $$
