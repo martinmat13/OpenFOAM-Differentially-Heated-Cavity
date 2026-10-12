@@ -1,0 +1,37 @@
+#!/bin/bash
+set -e
+cd "${0%/*}" || exit 1
+
+echo "=============================================================================="
+echo " Starting Mesh Verification & ASME V&V 20 GCI Study"
+echo " Differentially Heated Cavity (OpenFOAM-v2512)"
+echo "=============================================================================="
+
+# Run Grid 3: Coarse (50x50)
+echo "------------------------------------------------------------------------------"
+echo " 1/3: Running Grid 3 [Coarse: 50x50, N = 2,500]"
+echo "------------------------------------------------------------------------------"
+(cd cases/grid3_coarse && ./Allrun)
+
+# Run Grid 2: Medium (100x100)
+echo "------------------------------------------------------------------------------"
+echo " 2/3: Running Grid 2 [Medium: 100x100, N = 10,000]"
+echo "------------------------------------------------------------------------------"
+(cd cases/grid2_medium && ./Allrun)
+
+# Run Grid 1: Fine (200x200)
+echo "------------------------------------------------------------------------------"
+echo " 3/3: Running Grid 1 [Fine: 200x200, N = 40,000]"
+echo "------------------------------------------------------------------------------"
+(cd cases/grid1_fine && ./Allrun)
+
+# Post-processing and GCI analysis
+echo "=============================================================================="
+echo " Executing Automated ASME V&V 20 GCI Analysis & Plot Generation..."
+echo "=============================================================================="
+python3 scripts/postprocess_gci.py
+python3 scripts/plot_contours_comparison.py
+
+echo "=============================================================================="
+echo " GCI Study Workflow Complete! Results saved in ./results"
+echo "=============================================================================="

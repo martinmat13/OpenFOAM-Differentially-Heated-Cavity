@@ -1,0 +1,9 @@
+#!/bin/bash
+cd "${0%/*}" || exit 1
+
+echo "Cleaning all case directories and results in 04_mesh_independence_gci..."
+(cd cases/grid3_coarse && ./Allclean)
+(cd cases/grid2_medium && ./Allclean)
+(cd cases/grid1_fine && ./Allclean)
+rm -rf results/*
+echo "All clean!"

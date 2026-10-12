@@ -89,16 +89,15 @@ Verification asks:
 > **Are the governing equations being solved sufficiently independently
 > of numerical choices?**
 
-Planned checks:
+### Completed Systematic Mesh Verification (ASME V&V 20 / Roache GCI)
+See complete study in [`04_mesh_independence_gci`](04_mesh_independence_gci/README.md) and article [`website/gci_mesh_verification.mdx`](website/gci_mesh_verification.mdx).
 
-- mesh independence
-- timestep independence
-- residual convergence
-- mass conservation
-- energy conservation
-- numerical sensitivity
+- **Three-Grid Refinement Hierarchy:** Coarse ($50 \times 50$), Medium ($100 \times 100$), Fine ($200 \times 200$), constant ratio $r = 2.0$.
+- **Asymptotic Convergence:** Heat transfer converges within $1.85\%$ ($58.43 \to 59.53$), yielding an ASME Fine Grid Convergence Index of $GCI_{fine} = 0.16\%$.
+- **Continuum Extrapolated Value:** $\overline{Nu}_{ext} = 59.61 \pm 0.10$.
+- **Boundary Layer Resolution:** Demonstrates the physical scaling $\delta \sim L \cdot Ra^{-1/4} \approx 4.7$ mm and explains velocity peak steepening as $h \to 0$.
 
-See [`docs/verification.md`](docs/verification.md).
+See [`docs/verification.md`](docs/verification.md) and [`04_mesh_independence_gci/results/gci_summary_table.md`](04_mesh_independence_gci/results/gci_summary_table.md).
 
 ---
 

@@ -1,0 +1,11 @@
+#!/bin/bash
+cd "${0%/*}" || exit 1
+
+echo "-> Generating computational mesh (blockMesh)..."
+blockMesh > log.blockMesh 2>&1
+
+echo "-> Running buoyantBoussinesqSimpleFoam..."
+buoyantBoussinesqSimpleFoam > log.foam 2>&1
+
+touch case.foam
+echo "   [Execution completed]"

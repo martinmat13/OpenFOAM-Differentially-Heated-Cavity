@@ -1,0 +1,129 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2512                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    arch        "LSB;label=32;scalar=64";
+    class       dictionary;
+    location    "1500/uniform/functionObjects";
+    object      functionObjectProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+cdf7e925f5746741c316f5fbcf39ad0dfca90775
+{
+    midPlaneY
+    {
+        scalar
+        {
+            average(midY,T) 299.9926652430225;
+            min(midY,T)     290;
+            max(midY,T)     310;
+            average(T)      299.9926652430225;
+            min(T)          290;
+            max(T)          310;
+        }
+        label
+        {
+            size(midY,T)    200;
+            size(T)         200;
+            size(midY,U)    200;
+            size(U)         200;
+        }
+        vector
+        {
+            average(midY,U) ( 0.000648438 0.000166527 0 );
+            min(midY,U)     ( -0.00858155 -0.130012 0 );
+            max(midY,U)     ( 0.0100482 0.129618 0 );
+            average(U)      ( 0.000648438 0.000166527 0 );
+            min(U)          ( -0.00858155 -0.130012 0 );
+            max(U)          ( 0.0100482 0.129618 0 );
+        }
+    }
+    midPlaneX
+    {
+        scalar
+        {
+            average(midX,T) 300.0070985895951;
+            min(midX,T)     293.2442309490635;
+            max(midX,T)     306.7700203374567;
+            average(T)      300.0070985895951;
+            min(T)          293.2442309490635;
+            max(T)          306.7700203374567;
+        }
+        label
+        {
+            size(midX,T)    200;
+            size(T)         200;
+            size(midX,U)    200;
+            size(U)         200;
+        }
+        vector
+        {
+            average(midX,U) ( 0.000802136 0.00180543 0 );
+            min(midX,U)     ( -0.0245942 -0.00381293 0 );
+            max(midX,U)     ( 0.023424 0.00960802 0 );
+            average(U)      ( 0.000802136 0.00180543 0 );
+            min(U)          ( -0.0245942 -0.00381293 0 );
+            max(U)          ( 0.023424 0.00960802 0 );
+        }
+    }
+    nearHotWall
+    {
+        scalar
+        {
+            average(nearWallLine,T) 304.1550055388901;
+            min(nearWallLine,T) 296.4913777921349;
+            max(nearWallLine,T) 308.5882660919985;
+            average(T)      304.1550055388901;
+            min(T)          296.4913777921349;
+            max(T)          308.5882660919985;
+        }
+        label
+        {
+            size(nearWallLine,T) 200;
+            size(T)         200;
+        }
+    }
+}
+
+midPlaneY
+{
+    T
+    {
+        file            "<case>/postProcessing/midPlaneY/1500/midY_T_U.csv";
+    }
+    U
+    {
+        file            "<case>/postProcessing/midPlaneY/1500/midY_T_U.csv";
+    }
+}
+
+midPlaneX
+{
+    T
+    {
+        file            "<case>/postProcessing/midPlaneX/1500/midX_T_U.csv";
+    }
+    U
+    {
+        file            "<case>/postProcessing/midPlaneX/1500/midX_T_U.csv";
+    }
+}
+
+nearHotWall
+{
+    T
+    {
+        file            "<case>/postProcessing/nearHotWall/1500/nearWallLine_T.csv";
+    }
+}
+
+
+// ************************************************************************* //
