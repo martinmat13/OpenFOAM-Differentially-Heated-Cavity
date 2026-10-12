@@ -1,0 +1,101 @@
+---
+title: "Part 4: Exploring Turbulent Natural Convection"
+summary: "Transitioning to turbulence in the Differentially Heated Cavity: Exploring k-omega SST for high Rayleigh numbers."
+stack: ["OpenFOAM", "Linux", "CFD"]
+tags: ["Thermal CFD", "Turbulence", "k-omega SST", "Analysis"]
+solver: "buoyantBoussinesqSimpleFoam"
+status: "complete"
+date: 2026-10-08
+order: 4
+parent: "thermal-cfd"
+---
+import TContourImg from './images/thermal-cfd/T_contour.png';
+import UContourImg from './images/thermal-cfd/U_contour.png';
+import streamlinesImg from './images/thermal-cfd/streamlines.png';
+import midXTImg from './images/thermal-cfd/midX_T.png';
+import midXUxImg from './images/thermal-cfd/midX_Ux.png';
+import midYTImg from './images/thermal-cfd/midY_T.png';
+import midYUyImg from './images/thermal-cfd/midY_Uy.png';
+import nearHotWallTImg from './images/thermal-cfd/nearHotWall_T.png';
+
+**Author:** Martin Mathew | **Date:** 2026-10-08 | **Category:** Thermal CFD Tutorial  
+
+### 1. The Transition to Turbulence
+
+In our previous article, we established the baseline for a 2D Differentially Heated Cavity (DHC). While that case provides an excellent foundation, the Rayleigh number ($Ra$) we computed reached $2.06 \times 10^9$. In natural convection, transition to turbulence typically occurs when $Ra$ exceeds $10^8$ or $10^9$. This means our baseline case was already pushing the boundaries of the laminar regime!
+
+As the temperature difference ($\Delta T$) increases or the physical size of the cavity expands, buoyancy forces begin to dominate viscous dampening. The flow transitions from smooth, predictable laminar streamlines to chaotic, eddy-rich turbulent flow.
+
+In a Differentially Heated Cavity, this transition is highly localized. It usually begins in the boundary layers along the vertical heated and cooled walls, while the core of the cavity might remain relatively calm or become highly stratified. Capturing this physics requires moving beyond a simple laminar assumption.
+
+### 2. Turbulence Modeling for Buoyancy-Driven Flows
+
+Direct Numerical Simulation (DNS) resolves all turbulent scales but is computationally prohibitive for engineering applications. Instead, we rely on Reynolds-Averaged Navier-Stokes (RANS) models. 
+
+For thermal boundary layers, the **$k-\omega$ SST** (Shear Stress Transport) model is widely considered the industry standard. It excellently resolves the near-wall physics (where the thermal gradients are steepest) using the $k-\omega$ formulation, while switching to a $k-\epsilon$ formulation in the free stream to avoid sensitivity to freestream turbulence.
+
+### 3. Meshing: The Importance of Near-Wall Resolution
+
+Turbulence models, especially those resolving the boundary layer like $k-\omega$ SST, are highly sensitive to mesh resolution. The viscous sublayer must be accurately captured. In our updated setup, we refine the mesh from 50x50 to **100x100** to ensure there are enough cells clustered near the walls.
+
+For highly accurate heat flux (Nusselt number) calculations, maintaining a wall distance ($y^+$) of approximately 1 is crucial.
+
+### 4. Configuring OpenFOAM for Turbulence
+
+To transition our case, we made several modifications:
+
+1. **`constant/turbulenceProperties`**: 
+   We switched `simulationType` from `laminar` to `RAS` and specified the `kOmegaSST` model.
+2. **`system/fvSchemes` and `fvSolution`**:
+   We added numerical schemes and solver settings for the new turbulent quantities: turbulent kinetic energy ($k$) and specific dissipation rate ($\omega$). Crucially, we included the `wallDist` scheme, which $k-\omega$ SST relies on for its blending functions.
+3. **Boundary Conditions (`0/` directory)**:
+   We introduced appropriate wall functions for:
+   - $k$: `kqRWallFunction`
+   - $\omega$: `omegaWallFunction`
+   - $\nu_t$ (turbulent kinematic viscosity): `nutkWallFunction`
+   - $\alpha_t$ (turbulent thermal diffusivity): `alphatJayatillekeWallFunction` (designed specifically to capture thermal boundary layers by utilizing the turbulent Prandtl number, $Pr_t \approx 0.85$).
+
+### 5. Results and Physical Insights
+
+With the simulation complete, let's look at the extracted data from the new `case_turbulent`!
+
+<div className="grid grid-cols-1 md:grid-cols-2 gap-6 my-8">
+  <figure>
+    <img src={TContourImg.src} alt="Turbulent Temperature Contour" className="rounded-lg shadow-lg border border-hairline w-full" />
+    <figcaption className="text-center mt-3 text-sm text-ink-muted">Figure 1: Temperature Contour at Steady-State (Turbulent)</figcaption>
+  </figure>
+  <figure>
+    <img src={UContourImg.src} alt="Turbulent Velocity Contour" className="rounded-lg shadow-lg border border-hairline w-full" />
+    <figcaption className="text-center mt-3 text-sm text-ink-muted">Figure 2: Velocity Magnitude Contour (Turbulent)</figcaption>
+  </figure>
+</div>
+
+- **Velocity Profiles**: The peak vertical velocity ($U_y$) along the mid-plane $y=0.5$ increased substantially from **$0.085$ m/s** (in our baseline laminar assumption) to **$0.143$ m/s** with the $k-\omega$ SST model. The near-wall velocity peaks are sharper and closer to the walls, which is characteristic of a turbulent boundary layer.
+- **Core Stratification**: The horizontal velocity ($U_x$) across the mid-plane $x=0.5$ dropped from **$0.045$ m/s** to **$0.023$ m/s**. This indicates that the strong recirculating structures in the center of the cavity have been dampened by turbulent mixing, leading to a much flatter and more stratified core region.
+- **Temperature Profiles**: The maximum temperature measured just outside the viscous sublayer ($y^+ \approx 1$) remains around **$308.4$ K**. The turbulent mixing drastically flattens the temperature gradient in the center of the cavity, effectively acting as an insulator, while creating extremely steep temperature gradients directly adjacent to the hot and cold walls.
+
+<div className="grid grid-cols-1 md:grid-cols-2 gap-6 my-8">
+  <figure>
+    <img src={midXTImg.src} alt="Temperature along Horizontal Mid-plane" className="rounded-lg shadow-lg border border-hairline w-full" />
+    <figcaption className="text-center mt-3 text-sm text-ink-muted">Figure 3: Temperature along the Horizontal Mid-plane</figcaption>
+  </figure>
+  <figure>
+    <img src={midXUxImg.src} alt="Horizontal Velocity along Vertical Mid-plane" className="rounded-lg shadow-lg border border-hairline w-full" />
+    <figcaption className="text-center mt-3 text-sm text-ink-muted">Figure 4: Horizontal Velocity along the Vertical Mid-plane</figcaption>
+  </figure>
+  <figure>
+    <img src={midYTImg.src} alt="Temperature along Vertical Mid-plane" className="rounded-lg shadow-lg border border-hairline w-full" />
+    <figcaption className="text-center mt-3 text-sm text-ink-muted">Figure 5: Temperature along the Vertical Mid-plane</figcaption>
+  </figure>
+  <figure>
+    <img src={midYUyImg.src} alt="Vertical Velocity along Horizontal Mid-plane" className="rounded-lg shadow-lg border border-hairline w-full" />
+    <figcaption className="text-center mt-3 text-sm text-ink-muted">Figure 6: Vertical Velocity along the Horizontal Mid-plane</figcaption>
+  </figure>
+</div>
+
+<figure className="my-8">
+  <img src={nearHotWallTImg.src} alt="Temperature Profile Near Hot Wall" className="rounded-lg shadow-lg border border-hairline w-full" />
+  <figcaption className="text-center mt-3 text-sm text-ink-muted">Figure 7: High-resolution Temperature Profile near the Hot Wall</figcaption>
+</figure>
+
+By successfully moving to a turbulent solver, we have captured a far more realistic flow state for high Rayleigh numbers ($Ra > 10^9$). The $k-\omega$ SST model accurately predicts the strong boundary layer jets and the quiescent, stratified core—essential phenomena for industrial natural convection problems!

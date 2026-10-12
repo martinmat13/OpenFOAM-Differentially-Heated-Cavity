@@ -1,0 +1,81 @@
+---
+title: "Simulating the 1x1 Cavity: Physics & Expectations"
+summary: "Running the 1x1 Differentially Heated Cavity case. Understanding buoyancy-driven flow, what to expect from the solver, and analyzing the final steady-state convection."
+stack: ["OpenFOAM", "CFD", "Physics"]
+tags: ["Thermal CFD", "Natural Convection", "Simulation"]
+solver: "buoyantBoussinesqSimpleFoam"
+status: "ongoing"
+date: 2026-10-07
+featured: true
+order: 2
+---
+import Tabs from '../../components/Tabs.astro';
+import TabItem from '../../components/TabItem.astro';
+
+## Overview
+
+In the previous article, we laid down the structural foundations of an OpenFOAM case. Now, it is time to put those files to work. We will run our setup on a **1m × 1m 2D domain** filled with physical air ($Pr = 0.71$, $\nu = 1.5 \times 10^{-5}$ m²/s) and subjected to a 20 K temperature difference. 
+
+Because we are simulating physical air in a macro-scale 1-meter cavity, the Rayleigh number is massive ($Ra \approx 2 \times 10^9$). This means convection will heavily dominate over conduction. Let's explore what we expect to happen and run the solver for 5,000 iterations to reach a steady state.
+
+---
+
+<Tabs>
+  <TabItem title="2. Running the 1x1 Case">
+
+**Author:** Martin Mathew | **Date:** 2026-10-07 | **Category:** Thermal CFD Tutorial  
+
+### 1. Expectations: The Physics of Natural Convection
+
+Before hitting "run", a good CFD engineer always visualizes the expected flow field.
+
+We have a hot wall on the left ($310$ K) and a cold wall on the right ($290$ K). When the simulation starts from a zero-velocity initial condition, conduction is the only heat transfer mechanism. However, very quickly, the air adjacent to the hot wall will heat up, its density will decrease, and buoyancy forces will drive it upwards. Conversely, the air near the cold wall becomes dense and sinks.
+
+**What to expect at steady-state:**
+1. **The Convection Loop:** A large primary vortex will form, circulating clockwise around the entire 1x1 domain. 
+2. **Thermal Boundary Layers:** Because the convective forces are so strong ($Ra \approx 10^9$), heat will not diffuse evenly across the room. Instead, extreme temperature gradients will be confined to very thin **boundary layers** right next to the hot and cold walls. 
+3. **Core Stratification:** The center of the cavity will be mostly stagnant and exhibit thermal stratification—meaning the temperature will be relatively uniform horizontally, but will gradually increase from the bottom of the cavity to the top.
+
+*(Insert Geometry and Meshing Images Here)*
+
+### 2. Launching the Simulation
+
+We have configured `system/controlDict` to run `buoyantBoussinesqSimpleFoam` for **5000 iterations**. Because this is a steady-state solver (SIMPLE algorithm), "time" actually represents iteration steps. 
+
+To execute the run neatly, we use our automated script:
+
+```bash
+./runCase.sh
+```
+
+This script will:
+1. Generate the $50 \times 50$ hexahedral mesh.
+2. Launch the solver in the background.
+3. Automatically execute our Python validation and PyVista visualization scripts once it finishes.
+
+### 3. Monitoring Convergence
+
+As the solver marches towards 5,000 iterations, it calculates the residuals for Pressure (`p_rgh`), Velocity (`U`), and Temperature (`T`). 
+
+Because we are using a first-order upwind scheme (`bounded Gauss upwind` in `fvSchemes`) on a coarse mesh, the solver benefits from high numerical diffusion. This artificial "thickness" stabilizes the highly buoyant flow, allowing the residuals to drop smoothly and plateau. In a fully turbulent high-Ra flow like this, achieving machine-zero residuals is rarely possible on a coarse mesh; instead, we look for the residuals to flatten out, indicating a pseudo-steady state has been reached.
+
+### 4. Analyzing the Results
+
+Once the simulation completes, we expect the visual contours to exactly match our physical intuition.
+
+![Temperature Contour for Ra=2.1e9](/home/martin8991/OpenFOAM_cases/Thermal/OpenFOAM-Differentially-Heated-Cavity/results/T_contour_Ra2.1e09.png)
+
+In the temperature contour, look for the sharp red and blue zones hugging the vertical walls. This confirms the presence of thin thermal boundary layers. Notice how the top of the cavity is significantly warmer than the bottom, perfectly illustrating thermal stratification.
+
+![Velocity Streamlines for Ra=2.1e9](/home/martin8991/OpenFOAM_cases/Thermal/OpenFOAM-Differentially-Heated-Cavity/results/U_streamlines_Ra2.1e09.png)
+
+In the velocity fields, the streamlines will reveal the massive clockwise vortex. The highest velocities will be concentrated tightly against the walls where the buoyancy driving force is maximized, while the core remains relatively slow-moving.
+
+### Next Steps
+
+Running the case and getting a pretty picture is only half the battle. While our coarse $50 \times 50$ mesh provides a fantastic qualitative understanding of the convection loop, the heavy numerical diffusion from the first-order schemes means our quantitative data (like the Nusselt number) is likely inaccurate for such a high Rayleigh number. 
+
+In future modules, we will perform a **Grid Independence Study** and upgrade to **Second-Order Schemes** to capture the true, mathematically rigorous physics!
+
+  </TabItem>
+</Tabs>

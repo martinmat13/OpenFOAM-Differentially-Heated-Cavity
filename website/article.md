@@ -77,25 +77,35 @@ Running the solver is straightforward, but knowing *when* to stop is engineering
 
 Visualizing a bunch of numbers is where the physics actually comes to life. While ParaView is great for exploration, automated Python scripts using **PyVista** and **Pandas** allow for reproducible, neat post-processing.
 
+Here is the temperature contour and velocity magnitude contour generated automatically using our high-quality PyVista script:
+
+![Temperature Contour for Ra=4.2e9](/home/martin8991/OpenFOAM_cases/Thermal/OpenFOAM-Differentially-Heated-Cavity/results/T_contour_Ra4.2e09.png)
+
+![Velocity Contour for Ra=4.2e9](/home/martin8991/OpenFOAM_cases/Thermal/OpenFOAM-Differentially-Heated-Cavity/results/U_contour_Ra4.2e09.png)
+
 A standard post-processing pipeline for this case extracts:
-1. **Contour Plots**: Generating high-quality images of the Temperature ($T$) field and Velocity ($U$) magnitude directly from OpenFOAM data using PyVista.
-2. **Streamlines**: Visualizing the natural convection circulation vortices.
-3. **Mid-plane Profiles**: Plotting the vertical velocity ($U_y$) along the horizontal mid-plane ($y=0.5$) and horizontal velocity ($U_x$) along the vertical mid-plane ($x=0.5$).
-4. **Engineering Metrics**: The most important metric is the **Nusselt Number ($Nu$)**, which represents the ratio of convective to conductive heat transfer. We calculate this by reading the wall heat flux integrated by OpenFOAM's function objects.
+1. **Contour Plots**: Generating high-quality images directly from OpenFOAM data using PyVista.
+2. **Mid-plane Profiles**: Plotting the vertical velocity ($U_y$) along the horizontal mid-plane ($y=0.5$) and horizontal velocity ($U_x$) along the vertical mid-plane ($x=0.5$).
+3. **Engineering Metrics**: The most important metric is the **Nusselt Number ($Nu$)**, which represents the ratio of convective to conductive heat transfer. 
 
 ---
 
-## 6. Benchmark and Validation
+## 6. Benchmark and Validation (Ra = $10^5$)
 
 Before we can trust our model to simulate novel, complex designs, we must prove it can accurately replicate a known truth. For the DHC, the gold standard is the **De Vahl Davis (1983)** benchmark.
 
-We evaluate the setup against the reference data at specific **Rayleigh Numbers ($Ra$)**, a dimensionless number dictating the flow regime (laminar vs. turbulent). 
+To match the standard **Ra = $10^5$** benchmark, you should configure `constant/transportProperties` as follows:
+- **Prandtl Number (`Pr`)**: 0.71
+- **Kinematic Viscosity (`nu`)**: 1e-3 m²/s
+- **Thermal Expansion (`beta`)**: 7.176e-4 1/K
+- **Temperature Difference (`Delta T`)**: 20 K (e.g. 310 K and 290 K)
 
-We compare:
-- Maximum mid-plane velocities ($U_{x, max}$, $U_{y, max}$).
-- Average Nusselt number ($\overline{Nu}$) on the hot and cold walls.
+Running this exact case will yield results that can be directly compared to the literature:
+- **Max Mid-plane X Velocity ($U_{x, max}$)**: Target dimensionless is 34.73
+- **Max Mid-plane Y Velocity ($U_{y, max}$)**: Target dimensionless is 68.59
+- **Average Nusselt Number ($\overline{Nu}$)**: Target is 4.519
 
-If the relative error between our OpenFOAM results and the De Vahl Davis benchmark is sufficiently low (typically $< 1-3\%$ for fine meshes), we can confidently say our baseline thermal case is **validated**.
+If the relative error between our OpenFOAM results and the benchmark is sufficiently low, we can confidently say our baseline thermal case is **validated**.
 
 ---
 

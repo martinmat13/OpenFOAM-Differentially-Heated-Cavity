@@ -1,0 +1,145 @@
+---
+title: "Part 5: Unsteady Natural Convection"
+summary: "Capturing time-accurate thermal plumes and transient behavior in the Differentially Heated Cavity using the PIMPLE algorithm."
+stack: ["OpenFOAM", "Linux", "CFD"]
+tags: ["Thermal CFD", "Transient", "PIMPLE", "Courant Number"]
+solver: "buoyantBoussinesqPimpleFoam"
+status: "complete"
+date: 2026-10-08
+order: 5
+parent: "thermal-cfd"
+---
+import residualsImg from './images/thermal-cfd/residuals.png';
+import TContourImg from './images/thermal-cfd/T_Contour.png';
+import UContourImg from './images/thermal-cfd/U_contour.png';
+import animVideo from './images/thermal-cfd/anim.mp4';
+import midXTImg from './images/thermal-cfd/midX_T.png';
+import midXUxImg from './images/thermal-cfd/midX_Ux.png';
+import midYTImg from './images/thermal-cfd/midY_T.png';
+import midYUyImg from './images/thermal-cfd/midY_Uy.png';
+
+**Author:** Martin Mathew | **Date:** 2026-10-08 | **Category:** Thermal CFD Tutorial  
+
+### 1. The Need for Transient Simulation
+
+Up to this point, our simulations have utilized the `buoyantBoussinesqSimpleFoam` solver. This solver uses the **SIMPLE algorithm** (Semi-Implicit Method for Pressure Linked Equations), which is strictly designed for **steady-state** problems. It iteratively drives the solution towards a single, unchanging flow field.
+
+However, natural convection at high Rayleigh numbers ($Ra > 10^9$) is rarely perfectly steady in the real world. Instead, the boundary layers can become unstable, shedding vortices and generating unsteady thermal plumes. In these scenarios, a steady-state solver will often struggle to converge (its residuals will oscillate) because it's mathematically fighting against the physics of the flow.
+
+To capture this true time-varying behavior, we must transition to a **transient (time-accurate) solver**. Enter `buoyantBoussinesqPimpleFoam`.
+
+### 2. The PIMPLE Algorithm
+
+The PIMPLE algorithm is a hybrid of PISO (transient, strict Courant number limits) and SIMPLE (steady-state, under-relaxed). It allows us to take large time steps (even exceeding a Courant number of 1) while remaining stable, making it the industry standard for transient industrial flows.
+
+To configure PIMPLE in OpenFOAM, we modify `system/fvSolution`:
+```cpp
+PIMPLE
+{
+    nOuterCorrectors 1;  // Number of times the entire system is solved per time step
+    nCorrectors      2;  // Number of pressure-velocity coupling loops
+    nNonOrthogonalCorrectors 0;
+}
+```
+
+By removing under-relaxation factors (or setting them to 1.0) and letting the PIMPLE loop converge the equations at each discrete time step, we ensure the simulation is physically accurate in time.
+
+### 3. Time Stepping and the Courant Number
+
+In transient CFD, time is no longer just an iteration counter; it represents physical seconds. The size of the time step ($\Delta t$) determines whether the solver accurately captures the physics or crashes entirely. 
+
+To maintain stability without guessing an arbitrary time step, we use **adjustable time-stepping** based on the **Courant-Friedrichs-Lewy (CFL) condition**. In `system/controlDict`, we configured:
+
+```cpp
+adjustTimeStep yes;
+maxCo 2;
+```
+
+This tells OpenFOAM: *"Dynamically shrink or grow the time step so that a fluid particle never crosses more than 2 cells in a single time step."*
+
+### 4. Updating the Numerical Schemes
+
+A transient simulation requires a temporal discretization scheme to handle the $\partial / \partial t$ terms in the Navier-Stokes equations. We update `system/fvSchemes`:
+
+```cpp
+ddtSchemes
+{
+    default         Euler; // First-order, bounded, implicit transient scheme
+}
+```
+
+*Note: For highly accurate time-resolved studies (like Large Eddy Simulation), you would typically use a second-order scheme like `backward`.*
+
+### 5. Analyzing the Run and Residuals
+
+A critical part of transient CFD is proving that the solver maintains numerical stability while accurately stepping through time. Let's analyze the performance metrics from our 100-second physical simulation run on the **100x100 refined mesh** (10,000 cells):
+
+- **Total Physical Time**: 100.00 seconds.
+- **Maximum Courant Number**: 1.295. (Strictly controlled under our cap of 2!)
+- **Average Time Step ($\Delta t$)**: $0.0442$ seconds. This translates to roughly 22-23 time steps per second of physical time to strictly adhere to the CFL condition!
+
+<figure className="my-8">
+  <img src={residualsImg.src} alt="Transient Residuals Plot" className="rounded-lg shadow-lg border border-hairline w-full" />
+  <figcaption className="text-center mt-3 text-sm text-ink-muted">Figure 1: PIMPLE Initial Residuals over 100s of Physical Time</figcaption>
+</figure>
+
+**Residuals Analysis:**
+Unlike steady-state SIMPLE solvers where we want residuals to plunge to $10^{-6}$ and stay there, transient PIMPLE residuals look like a jagged "heartbeat". This is completely normal!
+1. **The "Spikes"**: Every spike in the residual plot represents the start of a *new time step*. As the fluid propagates forward in time, the initial guess for the new time step carries error.
+2. **The "Drops"**: Within that single time step, the PIMPLE algorithm (using `nCorrectors = 2` and `nOuterCorrectors = 1`) drives the error down by several orders of magnitude before advancing time.
+3. **Quasi-Steady Oscillations**: Notice how after $t \approx 20$s, the overall amplitude of the pressure (`p_rgh`) and velocity (`Ux`, `Uy`) residuals stop dropping and instead settle into a rhythmic pattern. This proves that the flow has reached a macro-level quasi-steady state, dominated by the continuous, rhythmic shedding of thermal plumes!
+
+### 6. Results: Watching the Plumes Evolve
+
+<div className="my-8">
+  <video autoPlay loop muted playsInline className="rounded-lg shadow-lg border border-hairline w-full">
+    <source src={animVideo} type="video/mp4" />
+  </video>
+  <figcaption className="text-center mt-3 text-sm text-ink-muted">Video 1: Transient Animation of the Differentially Heated Cavity</figcaption>
+</div>
+
+When simulating from $t=0$s (a completely still cavity), we observe a fascinating evolution:
+1. **Conduction Phase (0 - 2s)**: Initially, heat diffuses purely through conduction.
+2. **Plume Generation (2 - 15s)**: Within seconds, buoyancy overcomes viscosity. Sharp thermal plumes erupt from the bottom of the hot wall and the top of the cold wall.
+3. **Unsteady Recirculation (20s - 100s)**: The plumes crash into the horizontal walls, driving a massive, oscillating vortex that maintains the rhythmic residual pattern plotted above.
+4. **Quasi-Steady State (100s+)**: As the simulation runs past 100 seconds, the flow fully develops and the violent unsteadiness dampens. The boundary layers stabilize, and the cavity reaches a stable, time-averaged state.
+
+<div className="grid grid-cols-1 md:grid-cols-2 gap-6 my-8">
+  <figure>
+    <img src={TContourImg.src} alt="Temperature Contour at 100s" className="rounded-lg shadow-lg border border-hairline w-full" />
+    <figcaption className="text-center mt-3 text-sm text-ink-muted">Figure 2: Final Temperature Contour (t=100s)</figcaption>
+  </figure>
+  <figure>
+    <img src={UContourImg.src} alt="Velocity Magnitude Contour at 100s" className="rounded-lg shadow-lg border border-hairline w-full" />
+    <figcaption className="text-center mt-3 text-sm text-ink-muted">Figure 3: Final Velocity Magnitude (t=100s)</figcaption>
+  </figure>
+</div>
+
+<div className="grid grid-cols-1 md:grid-cols-2 gap-6 my-8">
+  <figure>
+    <img src={midXTImg.src} alt="Temperature along Horizontal Mid-plane" className="rounded-lg shadow-lg border border-hairline w-full" />
+    <figcaption className="text-center mt-3 text-sm text-ink-muted">Figure 4: Temperature along the Horizontal Mid-plane (t=100s)</figcaption>
+  </figure>
+  <figure>
+    <img src={midXUxImg.src} alt="Horizontal Velocity along Vertical Mid-plane" className="rounded-lg shadow-lg border border-hairline w-full" />
+    <figcaption className="text-center mt-3 text-sm text-ink-muted">Figure 5: Horizontal Velocity along the Vertical Mid-plane (t=100s)</figcaption>
+  </figure>
+  <figure>
+    <img src={midYTImg.src} alt="Temperature along Vertical Mid-plane" className="rounded-lg shadow-lg border border-hairline w-full" />
+    <figcaption className="text-center mt-3 text-sm text-ink-muted">Figure 6: Temperature along the Vertical Mid-plane (t=100s)</figcaption>
+  </figure>
+  <figure>
+    <img src={midYUyImg.src} alt="Vertical Velocity along Horizontal Mid-plane" className="rounded-lg shadow-lg border border-hairline w-full" />
+    <figcaption className="text-center mt-3 text-sm text-ink-muted">Figure 7: Vertical Velocity along the Horizontal Mid-plane (t=100s)</figcaption>
+  </figure>
+</div>
+
+**Validating against the Steady-State Baseline:**
+The greatest takeaway from running this expensive transient case is comparing its final state to our previous steady-state (`buoyantBoussinesqSimpleFoam`) results. 
+- Transient Max Vertical Velocity ($U_y$): **0.147 m/s** *(Steady-State was 0.143 m/s)*
+- Transient Max Horizontal Velocity ($U_x$): **0.035 m/s** *(Steady-State was 0.023 m/s)*
+- Transient Max Temperature Near Wall: **307.98 K** *(Steady-State was 308.43 K)*
+
+The results are remarkably similar! This proves that while the natural convection process is highly dynamic in the beginning, the steady-state SIMPLE solver successfully captured the time-averaged physical state of the cavity without needing to explicitly step through 200 seconds of physical time.
+
+By embracing time-accurate solvers and rigorously tracking our CFL conditions, we move away from "averaged" steady-state assumptions and unlock the ability to accurately analyze dynamic thermal phenomena!

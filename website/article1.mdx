@@ -1,0 +1,142 @@
+---
+title: "Thermal CFD Foundations: Setting Up Your First OpenFOAM Case"
+summary: "A comprehensive educational guide to setting up, configuring, and running your first OpenFOAM simulation using the Differentially Heated Cavity as a test case."
+stack: ["OpenFOAM", "Linux", "CFD"]
+tags: ["Thermal CFD", "Tutorial", "OpenFOAM Basics", "Case Setup"]
+solver: "buoyantBoussinesqSimpleFoam"
+status: "ongoing"
+date: 2026-10-07
+featured: true
+order: 1
+---
+import Tabs from '../../components/Tabs.astro';
+import TabItem from '../../components/TabItem.astro';
+
+## Overview
+
+This master project serves as a comprehensive guide to understanding and simulating thermal fluid dynamics. Before diving into complex numerical validations and turbulence, you must first master the tool: **OpenFOAM**. 
+
+This article is a purely educational step-by-step tutorial. We will use the Differentially Heated Cavity (DHC) as a test case to teach you the Linux environment commands, the OpenFOAM directory structure, and the exact purpose of every configuration dictionary.
+
+---
+
+<Tabs>
+  <TabItem title="1. OpenFOAM Setup Guide">
+
+**Author:** Martin Mathew | **Date:** 2026-10-07 | **Category:** Thermal CFD Tutorial  
+**Tags:** OpenFOAM, Linux, Mesh, Solvers, Setup
+
+### Getting Started: The OpenFOAM Philosophy
+
+Unlike commercial CFD software with graphical interfaces, OpenFOAM is entirely driven by text-based dictionaries and executed via the Linux command line. 
+
+An OpenFOAM case is strictly organized into three core directories:
+1. **`0/` (Time Directory):** Contains the initial boundary conditions and starting fields (Velocity, Pressure, Temperature).
+2. **`constant/`:** Contains physical properties, turbulence models, and the generated mesh.
+3. **`system/`:** Contains solver controls, numerical schemes, and mesh generation settings.
+
+Let's walk through how to configure each of these for a buoyancy-driven thermal simulation using the `buoyantBoussinesqSimpleFoam` solver.
+
+---
+
+### 1. Generating the Mesh (`system/blockMeshDict`)
+
+The foundation of any CFD simulation is the computational grid. In OpenFOAM, simple structured grids are generated using the `blockMesh` utility, governed by `system/blockMeshDict`.
+
+#### Key Parameters:
+- **`scale`**: Multiplies all vertex coordinates. For example, setting `scale 0.007854;` shrinks a $1 \times 1$ geometry down to $7.85$ mm, which is how we adjust the Rayleigh number for physical air without altering the base coordinate numbers.
+- **`vertices`**: Defines the corner points of your domain in 3D space $(x, y, z)$.
+- **`blocks`**: Connects the vertices to form a 3D block and defines the number of cells. `hex (0 1 2 3 4 5 6 7) (50 50 1)` creates a block with $50$ cells in the X and Y directions, and $1$ cell in Z (creating a 2D simulation).
+- **`boundary`**: This is crucial. It groups the outer faces of your mesh into named patches (e.g., `hotWall`, `coldWall`, `adiabaticWalls`).
+
+**Linux Command:** To generate the mesh, open your terminal, navigate to the case directory, and type:
+```bash
+blockMesh
+```
+
+---
+
+### 2. Defining Boundary Conditions (`0/` Directory)
+
+Once the mesh is generated, we must tell OpenFOAM what happens at the boundaries.
+
+#### Temperature (`0/T`)
+- **`hotWall`**: We apply a `fixedValue` of `310`. This acts as an infinite heat source.
+- **`coldWall`**: We apply a `fixedValue` of `290`.
+- **`adiabaticWalls`**: We apply `zeroGradient`. This tells the solver that heat cannot flow across this boundary, making it perfectly insulated.
+
+#### Velocity (`0/U`)
+For all physical walls, we apply the `noSlip` condition. This strictly enforces that the fluid velocity exactly at the wall is zero (due to viscosity).
+
+#### The 2D Hack (`empty`)
+Because OpenFOAM is natively a 3D solver, we simulate 2D cases by making the mesh 1-cell thick and setting the front and back faces to type `empty` in all `0/` files.
+
+---
+
+### 3. Setting Physical Properties (`constant/`)
+
+The `constant` directory defines the *what* of the simulation.
+
+- **`transportProperties`**: Defines the fluid. For standard air, we define the kinematic viscosity (`nu 1.5e-05;`), the Prandtl number (`Pr 0.71;`), and the thermal expansion coefficient (`beta 0.00333;`).
+- **`g`**: Defines the gravity vector. For natural convection, gravity is the driving engine. We define it as `(0 -9.81 0)` to point downwards.
+
+---
+
+### 4. Controlling the Solver (`system/controlDict` & `fvSchemes`)
+
+The `system` directory defines the *how* of the simulation. 
+
+#### `system/controlDict`
+This acts as the master steering wheel for the simulation.
+- **`application`**: Specifies the solver (e.g., `buoyantBoussinesqSimpleFoam`).
+- **`startFrom`** / **`startTime`**: Tells the solver to start from $t=0$ or resume from the `latestTime`.
+- **`endTime`**: The target time (or maximum iteration count for steady-state solvers).
+- **`deltaT`**: The time step size.
+- **`writeInterval`**: Determines how often data is saved to the disk (e.g., every 100 iterations).
+
+#### `system/fvSchemes`
+This defines the mathematical discretization techniques used to convert calculus into solvable algebra.
+- **`gradSchemes`**: Typically set to `Gauss linear` (2nd-order) for accurate gradients.
+- **`divSchemes`**: The convection terms. Using `bounded Gauss upwind` (1st-order) is highly recommended for initial stability, though it introduces numerical diffusion.
+
+#### `system/fvSolution`
+This controls the linear matrix solvers and relaxation factors. Because velocity, pressure, and temperature are highly coupled in buoyancy-driven flows, we use **relaxation factors** (e.g., `p_rgh 0.7`, `U 0.3`, `T 0.5`) to prevent the solver from overshooting and crashing during iterations.
+
+---
+
+### 5. Running the Simulation (Linux Workflow)
+
+A standard OpenFOAM workflow in the Linux terminal looks like this:
+
+**1. Clean previous data (Optional but recommended):**
+If you have written a custom shell script like `cleanCase.sh` to remove old time directories:
+```bash
+./scripts/cleanCase.sh
+```
+
+**2. Generate the Mesh:**
+```bash
+blockMesh
+```
+
+**3. Run the Solver:**
+You can run the solver directly, but it is best practice to pipe the output into a log file so you can review it later:
+```bash
+buoyantBoussinesqSimpleFoam > log.foam 2>&1
+```
+
+**4. Monitor Progress:**
+While the solver is running in the background, you can monitor its convergence (residuals) in real-time by tailing the log file:
+```bash
+tail -f log.foam
+```
+*(Press `Ctrl+C` to exit the tail command).*
+
+### Conclusion
+
+By understanding these core components—how to sculpt the domain with `blockMesh`, impose physics via the `0/` and `constant/` directories, and steer the mathematics via the `system/` directory—you are now fully equipped to operate OpenFOAM. 
+
+This test case setup is the baseline. In the upcoming modules, we will take this knowledge, run the simulation, and rigorously validate the extracted data against established scientific benchmarks!
+
+  </TabItem>
+</Tabs>

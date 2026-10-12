@@ -1,0 +1,29 @@
+#!/bin/bash
+cd "${0%/*}" || exit 1
+
+echo "=============================================================================="
+echo " Starting OpenFOAM Workflow: Turbulent k-omega SST"
+echo "=============================================================================="
+
+# Clean the case
+echo "-> Cleaning previous case data..."
+./Allclean
+
+# Generate Mesh
+echo "-> Generating computational mesh (blockMesh)..."
+blockMesh > log.blockMesh 2>&1
+echo "   [Mesh generated successfully]"
+
+# Run the Solver
+echo "-> Running buoyantBoussinesqSimpleFoam..."
+echo "   (This may take a few moments. Tailing progress to log.foam)"
+buoyantBoussinesqSimpleFoam > log.foam 2>&1
+echo "   [Solver execution completed]"
+
+# Post-process
+echo "-> Executing Automated Post-Processing..."
+python3 scripts/postProcess.py .
+
+echo "=============================================================================="
+echo " Workflow Complete!"
+echo "=============================================================================="

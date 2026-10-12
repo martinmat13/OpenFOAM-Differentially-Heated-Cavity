@@ -1,0 +1,6 @@
+#!/bin/bash
+cd "${0%/*}" || exit 1
+
+echo "Cleaning case directory..."
+rm -rf [1-9]* postProcessing log.* constant/polyMesh results
+echo "All clean!"
