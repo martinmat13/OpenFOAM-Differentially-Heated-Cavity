@@ -9,4 +9,4 @@
 | **Dimensionless u_star** | [-] | 2132.7501 | 1069.5014 | 1313.9449 | **1313.9449** | 1.00 | 18.60% | **23.25%** | 1.000 |
 | **Center Temperature (T_center)** | [K] | 299.8630 | 300.0360 | 300.0150 | **300.0150** | 1.00 | 0.01% | **0.01%** | 1.000 |
 
-*Notes: Safety Factor $F_s = 1.25$ for 3-grid study. Refinement ratio $r = 2.0$. Asymptotic ratio $\chi \approx 1.0$ indicates solutions reside within the asymptotic convergence regime.*
+*Notes: The table lists the current script's calculated outputs for safety factor $F_s = 1.25$ and refinement ratio $r = 2.0$. For average Nusselt number, the reported asymptotic ratio is $\chi=15.989$, not approximately 1; the reported fine-grid GCI and extrapolation are therefore not demonstrated uncertainty estimates. See the interpretation and limitations in [README.md](../README.md).*

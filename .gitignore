@@ -1,12 +1,17 @@
-# OpenFOAM generated time directories
-case/[1-9]*/
-case/[1-9][0-9]*/
-case/[1-9][0-9][0-9]*/
-case/postProcessing/
+# OpenFOAM generated time directories (retain the initial 0/ fields)
+/01_laminar_baseline/[1-9]*/
+/02_turbulent_sst/[1-9]*/
+/03_transient_pimple/[1-9]*/
+/04_mesh_independence_gci/cases/*/[1-9]*/
+/05_rayleigh_validation_sweep/cases/*/[1-9]*/
+**/postProcessing/
 
 # Mesh / parallel directories
-case/constant/polyMesh/
-case/processor*/
+**/constant/polyMesh/
+**/processor*/
+
+# Publisher PDFs should be referenced by DOI unless redistribution is authorized
+/validation/literature/*.pdf
 
 # Logs
 *.log

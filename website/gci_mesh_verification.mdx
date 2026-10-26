@@ -1,6 +1,6 @@
 ---
-title: "Part 6: Mesh Verification & Grid Convergence Index (GCI)"
-summary: "Quantifying numerical discretization error and establishing mesh independence in the Differentially Heated Cavity using the ASME V&V 20 Standard and Richardson Extrapolation."
+title: "Part 6: Three-Grid Refinement and GCI Limitations"
+summary: "A three-grid Richardson-extrapolation exercise for the differentially heated cavity, including why the current Nusselt data do not establish asymptotic grid uncertainty."
 stack: ["OpenFOAM", "Linux", "CFD", "Verification & Validation"]
 tags: ["Thermal CFD", "Mesh Independence", "GCI", "Richardson Extrapolation", "ASME V&V 20"]
 solver: "buoyantBoussinesqSimpleFoam"
@@ -11,14 +11,10 @@ parent: "thermal-cfd"
 ---
 import meshComparisonImg from './images/thermal-cfd/mesh_comparison.png';
 import residualsImg from './images/thermal-cfd/residuals_convergence.png';
-import T3PanelImg from './images/thermal-cfd/T_contour_comparison_3panel.png';
-import U3PanelImg from './images/thermal-cfd/U_contour_comparison_3panel.png';
-import nuDistImg from './images/thermal-cfd/nu_distribution_comparison.png';
-import gciNuImg from './images/thermal-cfd/gci_error_bars_Nu.png';
 import midYUyImg from './images/thermal-cfd/midY_Uy_comparison.png';
 import midXUxImg from './images/thermal-cfd/midX_Ux_comparison.png';
 import midYTImg from './images/thermal-cfd/midY_T_comparison.png';
-import gciVelImg from './images/thermal-cfd/gci_error_bars_velocity.png';
+import nuDistImg from './images/thermal-cfd/nu_distribution_comparison.png';
 
 **Author:** Martin Mathew | **Date:** 2026-10-12 | **Category:** Thermal CFD Tutorial  
 
@@ -32,200 +28,247 @@ In computational fluid dynamics (CFD), the boundary between *Verification* and *
 - **Verification:** *"Are we solving the mathematical equations right?"* (Quantifying numerical algorithm errors, code bugs, and grid discretization error).
 - **Validation:** *"Are we solving the right equations?"* (Quantifying how closely the physical model reflects experimental reality).
 
-Before claiming that a simulation validates against benchmark literature (such as De Vahl Davis), we must first verify that our solution is **mesh-independent**. Without a formal mesh convergence study, a CFD result is merely a point estimate of unknown numerical uncertainty.
-
-In this study, we implement the **ASME V&V 20-2009 Standard** (*Standard for Verification and Validation in Computational Fluid Dynamics and Heat Transfer*) based on the foundational work of **P. J. Roache (1998)** and **Celik et al. (2008)**.
+Grid refinement helps estimate numerical error before comparing with literature. A three-grid calculation does not automatically establish mesh independence: the observed convergence must meet the method's assumptions and pass an asymptotic-range check. The results in this study do not pass that check for mean Nusselt number.
 
 ---
 
-### 2. The ASME V&V 20 Methodology: Richardson Extrapolation & GCI
+### 2. Richardson Extrapolation & The Grid Convergence Index (GCI)
 
-The **Grid Convergence Index (GCI)** provides an objective, standardized method to determine the discretization error band on any computed quantity of interest ($f$). Rather than arbitrarily doubling cell counts and visually comparing plots, the GCI uses **Richardson Extrapolation** across three systematically refined meshes.
+Rather than arbitrarily increasing cell counts and visually guessing when fields stop changing, the **ASME V&V 20-2009 Standard** (*Standard for Verification and Validation in Computational Fluid Dynamics and Heat Transfer*), based on the foundational work of **P. J. Roache (1998)** and **Celik et al. (2008)**, provides a rigorous mathematical framework.
 
-#### 2.1 The Three-Grid Hierarchy
-We generate three geometrically similar meshes with a constant grid refinement ratio $r = 2.0$:
+#### 2.1 The Concept of Richardson Extrapolation
+For any discrete numerical scheme, Taylor series truncation error dictates that a computed quantity $f(h)$ at characteristic cell size $h$ approaches the exact continuum solution $f_{exact}$ according to:
 
-| Grid Level | Mesh Name | Cell Dimensions | Total Cells ($N$) | Characteristic Cell Spacing $h$ [m] | Refinement Ratio $r$ |
-| :---: | :---: | :---: | :---: | :---: | :---: |
-| **Grid 3** | Coarse | $50 \times 50$ | 2,500 | $0.020$ | — |
-| **Grid 2** | Medium | $100 \times 100$ | 10,000 | $0.010$ | $r_{32} = 2.00$ |
-| **Grid 1** | Fine | $200 \times 200$ | 40,000 | $0.005$ | $r_{21} = 2.00$ |
+`$f(h) = f_{exact} + C_1 h^p + C_2 h^{p+1} + \dots$`
+
+When the mesh is sufficiently refined to enter the **asymptotic range of convergence**, higher-order terms become negligible:
+
+`$f(h) \approx f_{exact} + C h^p$`
+
+Richardson Extrapolation uses solutions from multiple systematically refined grids to mathematically eliminate the leading error term `$C h^p$`, yielding the continuum zero-spacing estimate `$f_{ext}$` without needing an infinitely fine mesh.
+
+#### 2.2 Core Concepts & Mathematical Formulation
+
+Let $f_1, f_2, f_3$ denote discrete solutions evaluated on fine, medium, and coarse meshes with a constant grid refinement ratio $r = h_3/h_2 = h_2/h_1 = 2.0$:
+
+1. **Step Differences:**
+   `$\epsilon_{21} = f_2 - f_1$`, `$\epsilon_{32} = f_3 - f_2$`
+   - If `$\epsilon_{32}/\epsilon_{21} > 0$`, convergence is **monotonic**.
+   - If `$\epsilon_{32}/\epsilon_{21} < 0$`, convergence is **oscillatory**.
+
+2. **Observed Apparent Order of Convergence ($p$):**
+   `$p = \ln|\epsilon_{32} / \epsilon_{21}| / \ln(r)$`
+   The apparent order indicates how rapidly truncation error drops with grid refinement. It reflects the real, observed spatial accuracy of the coupled solver.
+
+3. **Richardson Extrapolated Value ($f_{ext}$):**
+   `$f_{ext}^{21} = f_1 + (f_1 - f_2) / (r^p - 1)$`
+   This represents the predicted solution at zero cell size ($h \to 0$).
+
+4. **Grid Convergence Index ($GCI$):**
+   The GCI uses a safety factor ($F_s = 1.25$ for a three-grid study) to report a discretization-error estimate under the method's convergence assumptions. It is not a statistical 95% confidence interval:
+   - Fine Grid Uncertainty: `$GCI_{fine}^{21} = (F_s \cdot e_a^{21}) / (r^p - 1)$`
+   - Medium Grid Uncertainty: `$GCI_{medium}^{32} = (F_s \cdot e_a^{32} \cdot r^p) / (r^p - 1)$`
+   where `$e_a^{21} = |(f_1 - f_2) / f_1| \times 100\%$` is the relative step change.
+
+5. **Asymptotic Range Verification ($\chi$):**
+   `$\chi = GCI_{32} / (r^p \cdot GCI_{21}) \approx 1.0$`
+   When $\chi \approx 1.0$, the results are consistent with the asymptotic range. This is a necessary diagnostic for interpreting the extrapolation, not a guarantee of correctness.
+
+---
+
+### 3. Mesh Hierarchy & Verification Plots Analysis
+
+To conduct our study, we configured three geometrically similar hexahedral meshes with a constant refinement ratio $r = 2.0$:
+- **Grid 3 (Coarse):** $50 \times 50$ ($N = 2,500$ cells, $h = 0.020$ m)
+- **Grid 2 (Medium):** $100 \times 100$ ($N = 10,000$ cells, $h = 0.010$ m)
+- **Grid 1 (Fine):** $200 \times 200$ ($N = 40,000$ cells, $h = 0.005$ m)
+
+Below is the detailed visual verification and physical insight for each of our key verification metrics:
+
+---
+
+#### 3.1 Mesh Comparison: Resolving the Buoyant Boundary Layer
 
 <div className="my-8 rounded-xl overflow-hidden shadow-lg border border-slate-700/50">
   <img src={meshComparisonImg.src} alt="Grid Hierarchy Corner Detail" className="w-full h-auto" />
   <p className="text-sm text-center py-2 px-4 bg-slate-900/80 text-slate-300">
-    Figure 1: Near-wall grid density comparison at the bottom-left corner of the heated wall joint. Notice the systematic fourfold cell area reduction at each stage.
+    Figure 1: Near-wall grid density comparison at the bottom-left corner (joint between the heated vertical wall and adiabatic bottom wall).
   </p>
 </div>
 
-#### 2.2 Mathematical Formulation
-
-Let $f_1, f_2, f_3$ denote the discrete numerical solutions on the fine, medium, and coarse grids, respectively.
-
-1. **Step Differences:**
-   `$\epsilon_{21} = f_2 - f_1$`, `$\epsilon_{32} = f_3 - f_2$`
-   If `$\epsilon_{32}/\epsilon_{21} > 0$`, the numerical convergence is monotonic. If negative, it is oscillatory.
-
-2. **Observed Apparent Order of Convergence ($p$):**
-   For a constant refinement ratio $r = 2.0$:
-   `$p = \ln|\epsilon_{32} / \epsilon_{21}| / \ln(r)$`
-
-3. **Richardson Extrapolation (Continuum Zero-Spacing Solution):**
-   `$f_{ext}^{21} = f_1 + (f_1 - f_2) / (r^p - 1)$`
-
-4. **Relative Discretization Errors:**
-   - Approximate Relative Error: `$e_a^{21} = |(f_1 - f_2) / f_1| \times 100\%$`
-   - Extrapolated Relative Error: `$e_{ext}^{21} = |(f_{ext}^{21} - f_1) / f_{ext}^{21}| \times 100\%$`
-
-5. **Grid Convergence Index ($GCI$):**
-   Following ASME guidelines with a safety factor $F_s = 1.25$ for three-grid studies:
-   `$GCI_{fine}^{21} = (F_s \cdot e_a^{21}) / (r^p - 1)$`
-   `$GCI_{medium}^{32} = (F_s \cdot e_a^{32} \cdot r^p) / (r^p - 1)$`
-
-6. **Asymptotic Convergence Criterion:**
-   `$\chi = GCI_{32} / (r^p \cdot GCI_{21}) \approx 1.0$`
-   When the asymptotic ratio $\chi$ approaches unity, the discrete solutions are verified to reside within the asymptotic convergence range where higher-order truncation terms become negligible.
+**Technical Insights:**
+- **Boundary Layer Scaling:** In high-Rayleigh natural convection ($Ra \approx 2 \times 10^9$), the characteristic thermal and hydrodynamic boundary layer thickness scales according to laminar boundary layer theory as:
+  `$\delta \sim L \cdot Ra^{-1/4} \approx 1.0 \cdot (2.06 \times 10^9)^{-1/4} \approx 4.7$` mm.
+- **Resolution Assessment:**
+  - On the **Coarse grid** ($\Delta x = 20$ mm), cell width is over four times larger than $\delta$. The entire near-wall buoyant jet is swallowed within a single cell layer, causing severe numerical smearing.
+  - On the **Medium grid** ($\Delta x = 10$ mm), cell spacing drops to roughly $2\delta$, beginning to capture the near-wall gradient.
+  - On the **Fine grid** ($\Delta x = 5$ mm), cell size closely approaches the physical boundary layer thickness $\delta \approx 4.7$ mm, allowing steep wall-normal velocity and thermal gradients to be captured without excessive numerical diffusion.
 
 ---
 
-### 3. Quantitative Verification Results
+#### 3.2 Residuals Convergence: Solver Stability Across Scales
 
-We executed the three cases using `buoyantBoussinesqSimpleFoam` until residuals dropped and stabilized over 2,000 iterations. Applying our automated post-processing script yielded the following formal GCI metrics:
+<div className="my-8 rounded-xl overflow-hidden shadow-lg border border-slate-700/50">
+  <img src={residualsImg.src} alt="Residual Convergence History Across All Grids" className="w-full h-auto" />
+  <p className="text-sm text-center py-2 px-4 bg-slate-900/80 text-slate-300">
+    Figure 2: Iteration convergence history for velocity ($U_x$) and temperature ($T$) residuals across all three meshes.
+  </p>
+</div>
 
-| Quantity of Interest | Unit | Coarse (50x50) | Medium (100x100) | Fine (200x200) | Extrapolated Continuum ($h \to 0$) | Apparent Order ($p$) | $e_a^{21}$ (%) | $GCI_{fine}$ (%) | Asymptotic Ratio ($\chi$) |
+**Technical Insights:**
+- **Numerical Diffusion vs. Convergence Rate:** On the coarse mesh, high numerical diffusion provides strong artificial damping that accelerates algebraic residual drop below $10^{-4}$ in fewer iterations.
+- **Matrix Condition & Resolution:** On the medium (10k cells) and fine (40k cells) meshes, resolving finer velocity gradients requires more iterations for the elliptic pressure-Poisson and energy fields to relax across the larger coefficient matrix.
+- **Asymptotic Plateau:** All three meshes achieve monotonic residual decay and settle into smooth, stable plateaus without unphysical oscillations, confirming that `buoyantBoussinesqSimpleFoam` maintains numerical stability across all grid scales.
+
+---
+
+#### 3.3 Vertical Velocity Profile ($U_y$) along Mid-Plane $y = 0.5$
+
+<div className="my-8 rounded-xl overflow-hidden shadow-lg border border-slate-700/50">
+  <img src={midYUyImg.src} alt="Vertical Velocity Profile Comparison" className="w-full h-auto" />
+  <p className="text-sm text-center py-2 px-4 bg-slate-900/80 text-slate-300">
+    Figure 3: Vertical velocity profile ($U_y$) along the horizontal midplane $y = 0.5$ ($x \in [0, 1]$).
+  </p>
+</div>
+
+**Technical Insights:**
+- **Buoyant Wall Jet:** Fluid adjacent to the hot wall ($x = 0$) accelerates upward due to positive buoyancy, while fluid along the cold wall ($x = 1$) accelerates downward with equal intensity, preserving anti-symmetry.
+- **Core Quiescence:** Across the central 70% of the enclosure ($0.15 < x < 0.85$), vertical velocity is virtually zero ($U_y \approx 0$), proving that fluid circulation is confined to narrow boundary streams surrounding a stagnant central core.
+- **Peak Acceleration Sensitivity:** Maximum upward velocity sharply increases with refinement: $v_{max} = 0.085$ m/s (Coarse) $\to 0.128$ m/s (Medium) $\to 0.1935$ m/s (Fine). Because uniform Cartesian meshes cannot grade cells infinitely close to the wall, refining $h$ directly captures the true velocity peak that coarse grids artificially suppress.
+
+---
+
+#### 3.4 Horizontal Velocity Profile ($U_x$) along Mid-Plane $x = 0.5$
+
+<div className="my-8 rounded-xl overflow-hidden shadow-lg border border-slate-700/50">
+  <img src={midXUxImg.src} alt="Horizontal Velocity Profile Comparison" className="w-full h-auto" />
+  <p className="text-sm text-center py-2 px-4 bg-slate-900/80 text-slate-300">
+    Figure 4: Horizontal velocity profile ($U_x$) along the vertical midplane $x = 0.5$ ($y \in [0, 1]$).
+  </p>
+</div>
+
+**Technical Insights:**
+- **Recirculating Cross-Flow:** The vertical plume hits the adiabatic ceiling, turning horizontally across the top from left to right ($U_x > 0$ for $y > 0.8$). Sinking cold fluid turns along the bottom floor from right to left ($U_x < 0$ for $y < 0.2$).
+- **Horizontal-velocity sensitivity:** The medium and fine values are closer than the coarse and medium values, but the sequence is non-monotonic (0.0451, 0.0226, and 0.0278 m/s). This three-grid record does not establish grid independence for horizontal velocity.
+
+---
+
+#### 3.5 Temperature Profile ($T$) along Mid-Plane $y = 0.5$
+
+<div className="my-8 rounded-xl overflow-hidden shadow-lg border border-slate-700/50">
+  <img src={midYTImg.src} alt="Temperature Profile Comparison" className="w-full h-auto" />
+  <p className="text-sm text-center py-2 px-4 bg-slate-900/80 text-slate-300">
+    Figure 5: Temperature distribution ($T$) along the horizontal midplane $y = 0.5$ ($x \in [0, 1]$).
+  </p>
+</div>
+
+**Technical Insights:**
+- **Convection Domination vs. Conduction:** In pure conduction ($Ra \to 0$), the midplane temperature is a linear slope from 310 K down to 290 K. At $Ra \approx 2 \times 10^9$, convective mixing establishes an isothermal core at exactly $T = 300.0$ K across $0.1 < x < 0.9$.
+- **Thermal Boundary Layer Confinement:** Extreme thermal gradients are compressed entirely into thin layers within $\Delta x < 0.05$ m of the hot and cold walls.
+- **Symmetry Preservation:** The center temperature converges to $300.015$ K with an approximate relative error of only $e_a^{21} = 0.01\%$, demonstrating strict preservation of thermal anti-symmetry.
+
+---
+
+#### 3.6 Local Nusselt Number Distribution along Heated Wall
+
+<div className="my-8 rounded-xl overflow-hidden shadow-lg border border-slate-700/50">
+  <img src={nuDistImg.src} alt="Local Nusselt Number Distribution" className="w-full h-auto" />
+  <p className="text-sm text-center py-2 px-4 bg-slate-900/80 text-slate-300">
+    Figure 6: Local Nusselt number distribution $Nu(y)$ along the vertical heated wall ($x = 0$, $y \in [0, 1]$).
+  </p>
+</div>
+
+**Technical Insights:**
+- **Leading-Edge Impingement:** Cold fluid ($290$ K) sweeping across the floor hits the bottom edge of the hot wall ($y \approx 0$), producing an intense thermal gradient and peak heat transfer ($Nu > 150 - 180$).
+- **Boundary Layer Growth:** As fluid rises along the wall, it absorbs heat and warms up, thickening the thermal boundary layer and monotonically decreasing the local heat transfer rate $Nu(y)$ toward the top ceiling ($y = 1$).
+- **Mean Nusselt change:** The average changes by **1.85%** between medium and fine grids ($58.43 \to 59.53$). The calculated asymptotic ratio is $\chi=15.989$, however, so this change and the nominal $GCI_{fine}=0.16\%$ do not establish grid independence or a validated uncertainty estimate.
+
+---
+
+### 4. Quantitative ASME V&V 20 Verification Summary
+
+Applying the automated Richardson extrapolation and GCI calculation pipeline across the three grid levels yields the following verification dataset:
+
+| Quantity of Interest | Unit | Coarse (50x50) | Medium (100x100) | Fine (200x200) | Extrapolated Continuum ($h \to 0$) | Apparent Order ($p$) | Relative Error $e_a^{21}$ | Fine Grid Index $GCI_{fine}$ | Asymptotic Ratio (\chi) |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Average Nusselt ($\overline{Nu}$)** | [-] | 41.1717 | 58.4341 | 59.5341 | **59.6090** | 3.97 | 1.85% | **0.16%** | 15.989 |
-| **Max Vertical Velocity ($v_{max}$)** | [m/s] | 0.0854 | 0.1285 | 0.1935 | **1.0989** | 0.10 | 33.58% | **584.87%** | 0.999 |
-| **Dimensionless $v^*$** | [-] | 4043.32 | 6083.42 | 9159.38 | **52015.84** | 0.10 | 33.58% | **584.87%** | 0.999 |
+| **Average Nusselt (\overline{Nu})** | [-] | 41.1717 | 58.4341 | 59.5341 | **59.6090** | 3.97 | 1.85% | **0.16%** | 15.989 |
+| **Cavity Center Temp ($T_{center}$)** | [K] | 299.8630 | 300.0360 | 300.0150 | **300.0150** | 1.00 | 0.01% | **0.01%** | 1.000 |
 | **Max Horizontal Velocity ($u_{max}$)** | [m/s] | 0.0451 | 0.0226 | 0.0278 | **0.0278** | 1.00 | 18.60% | **23.25%** | 1.000 |
-| **Dimensionless $u^*$** | [-] | 2132.75 | 1069.50 | 1313.94 | **1313.94** | 1.00 | 18.60% | **23.25%** | 1.000 |
-| **Center Temperature ($T_{center}$)** | [K] | 299.8630 | 300.0360 | 300.0150 | **300.0150** | 1.00 | 0.01% | **0.01%** | 1.000 |
+| **Max Vertical Velocity ($v_{max}$)** | [m/s] | 0.0854 | 0.1285 | 0.1935 | **1.0989** | 0.10 | 33.58% | **584.87%** | 0.999 |
 
-*Note: Safety factor $F_s = 1.25$. Refinement ratio $r = 2.0$.*
+*Note: Safety factor $F_s = 1.25$. Refinement ratio $r = 2.0$. Redundant dimensionless velocity scalings ($u^*, v^*$) have been omitted because they represent identical percentage errors and convergence orders as their dimensional counterparts.*
 
----
-
-### 4. Residual History & Convergence Stability
-
-The convergence history across all three meshes is displayed in Figure 2.
-
-<div className="my-8 rounded-xl overflow-hidden shadow-lg border border-slate-700/50">
-  <img src={residualsImg.src} alt="Residual Convergence Across All Grids" className="w-full h-auto" />
-  <p className="text-sm text-center py-2 px-4 bg-slate-900/80 text-slate-300">
-    Figure 2: Initial residual history for velocity ($U_x$) and temperature ($T$) across the 50x50, 100x100, and 200x200 grid hierarchy.
-  </p>
-</div>
-
-Notice how the coarse mesh residuals drop faster due to higher numerical diffusion, while the fine mesh requires more iterations for pressure Poisson relaxation across the 40,000 cells. However, all three meshes achieve stable, non-divergent plateaus.
+**Interpretation:** The Nusselt asymptotic ratio $\chi=15.989$ is far from unity. The calculated extrapolation and fine-grid GCI are reported as outputs but must not be presented as an uncertainty interval or proof of mesh independence. The horizontal-velocity sequence is non-monotonic, and the vertical-velocity extrapolation is far from the fine-grid value. See the main [grid-study README](../04_mesh_independence_gci/README.md) for the limitations.
 
 ---
 
-### 5. Detailed Physical & Numerical Analysis
+#### 4.1 How Each Verification Metric is Calculated & Its Relevance
 
-#### 5.1 Heat Transfer & Nusselt Number Convergence
+To understand why verification is the cornerstone of credible computational fluid dynamics, here is how each column in the table is mathematically computed and what it physically signifies:
 
-The global heat transfer across the enclosure is measured by the average Nusselt number $\overline{Nu}$ on the heated wall:
+1. **Discrete Grid Solutions ($f_3, f_2, f_1$):**
+   - **How it is obtained:** Raw simulation outputs evaluated on systematically refined meshes: Coarse ($f_3$, $h_3 = 0.020$ m), Medium ($f_2$, $h_2 = 0.010$ m), and Fine ($f_1$, $h_1 = 0.005$ m).
+   - **Relevance:** Establishes the three discrete data points required to solve for the three unknowns in the truncation error expansion: continuum solution ($f_{ext}$), error coefficient ($C$), and apparent order ($p$).
 
-<div className="grid grid-cols-1 md:grid-cols-2 gap-6 my-8">
-  <div className="rounded-xl overflow-hidden shadow-lg border border-slate-700/50">
-    <img src={gciNuImg.src} alt="GCI Error Bars for Nusselt Number" className="w-full h-auto" />
-    <p className="text-sm text-center py-2 px-4 bg-slate-900/80 text-slate-300">
-      Figure 3a: Richardson extrapolation and GCI 95% uncertainty window for average Nusselt number $\overline{Nu}$.
-    </p>
-  </div>
-  <div className="rounded-xl overflow-hidden shadow-lg border border-slate-700/50">
-    <img src={nuDistImg.src} alt="Local Nusselt Number Distribution" className="w-full h-auto" />
-    <p className="text-sm text-center py-2 px-4 bg-slate-900/80 text-slate-300">
-      Figure 3b: Local Nusselt number distribution $Nu(y)$ along the vertical heated wall.
-    </p>
-  </div>
-</div>
+2. **Approximate Relative Error ($e_a^{21}$):**
+   - **Formula:** `$e_a^{21} = |(f_1 - f_2) / f_1| \times 100\%$`
+   - **Relevance:** Measures the step-to-step percentage change from the medium to the fine mesh. A small value alone does not prove that further refinement is negligible or that the solutions are asymptotic.
 
-**Key Insights:**
-1. **Asymptotic Plateau:** Between the Medium ($100 \times 100$) and Fine ($200 \times 200$) grids, $\overline{Nu}$ shifts by a mere **1.85%** ($58.43 \to 59.53$).
-2. **GCI Uncertainty:** The fine-grid convergence index is an exceptionally tight **$GCI_{fine} = 0.16\%$**, establishing that the continuum thermal solution is $\overline{Nu}_{ext} = 59.61 \pm 0.10$.
-3. **Local Profile:** At the bottom corner ($y \approx 0$), incoming cold air sweeps against the hot wall, producing an intense thermal gradient ($Nu > 150$). As the air rises and warms, $Nu(y)$ decreases along the vertical wall. The coarse mesh severely underestimates this leading-edge peak due to cell smearing.
+3. **Observed Apparent Order of Convergence ($p$):**
+   - **Formula:** `$p = \ln|(f_3 - f_2) / (f_2 - f_1)| / \ln(r)$`
+   - **Relevance:** Provides an apparent rate for the sampled grid triplet when its values are suitable for the Richardson model. It is not by itself proof of asymptotic convergence; in this dataset the apparent order and asymptotic ratio must be interpreted together.
 
-#### 5.2 The Boundary Layer Jet & Velocity Discretization
+4. **Richardson Extrapolated Continuum Solution ($f_{ext}$):**
+   - **Formula:** `$f_{ext} = f_1 + (f_1 - f_2) / (r^p - 1)$`
+   - **Relevance:** Estimates the zero-spacing limit if the leading-order error model is valid. Treat the reported extrapolation as a conditional estimate, not an exact continuum solution.
 
-While the thermal heat flux converges rapidly, the velocity field exhibits a classic boundary-layer resolution phenomenon:
+5. **Fine Grid Convergence Index ($GCI_{fine}$):**
+   - **Formula:** `$GCI_{fine} = (F_s \cdot e_a^{21}) / (r^p - 1)$` (with ASME safety factor $F_s = 1.25$ for 3-grid studies).
+   - **Relevance:** The GCI provides a standardized discretization-error estimate when the convergence assumptions are supported. It is not a statistical confidence interval. Here $\chi=15.989$ for $\overline{Nu}$, so $0.16\%$ is not a defensible uncertainty bound.
 
-<div className="grid grid-cols-1 md:grid-cols-2 gap-6 my-8">
-  <div className="rounded-xl overflow-hidden shadow-lg border border-slate-700/50">
-    <img src={midYUyImg.src} alt="Vertical Velocity Profile" className="w-full h-auto" />
-    <p className="text-sm text-center py-2 px-4 bg-slate-900/80 text-slate-300">
-      Figure 4a: Vertical velocity $U_y$ on midplane $y = 0.5$. Notice the sharp boundary layer acceleration.
-    </p>
-  </div>
-  <div className="rounded-xl overflow-hidden shadow-lg border border-slate-700/50">
-    <img src={midXUxImg.src} alt="Horizontal Velocity Profile" className="w-full h-auto" />
-    <p className="text-sm text-center py-2 px-4 bg-slate-900/80 text-slate-300">
-      Figure 4b: Horizontal velocity $U_x$ on midplane $x = 0.5$.
-    </p>
-  </div>
-</div>
-
-**Why does $v_{max}$ increase as the grid is refined?**
-In high-Rayleigh natural convection ($Ra \approx 2 \times 10^9$), the thermal and momentum boundary layer thickness scales as:
-`$\delta \sim L \cdot Ra^{-1/4} \approx 1.0 \cdot (2.06 \times 10^9)^{-1/4} \approx 4.7$` mm
-
-- **On Grid 3 (Coarse):** The cell width is $\Delta x = 20$ mm. Because $\Delta x > \delta$, the entire buoyant updraft is trapped inside a single cell! First-order numerical diffusion artificially broadens and slows the velocity peak ($v_{max} = 0.085$ m/s).
-- **On Grid 2 (Medium):** With $\Delta x = 10$ mm, the boundary layer spans ~0.5 cells. The velocity jet sharpens ($v_{max} = 0.128$ m/s).
-- **On Grid 1 (Fine):** With $\Delta x = 5$ mm, the cell size finally approaches the physical boundary layer scale, resolving the sharp buoyant jet near $x = 0.01$ m ($v_{max} = 0.193$ m/s).
-
-This demonstrates why uniform Cartesian grids are suboptimal for high-Rayleigh boundary layers and why graded meshes (clustering cells near the wall to achieve $y^+ < 1$ and $\ge 10$ cells within $\delta$) are essential for high-fidelity velocity captures.
-
-#### 5.3 2D Field Contour Evolutions
-
-<div className="my-8 rounded-xl overflow-hidden shadow-lg border border-slate-700/50">
-  <img src={T3PanelImg.src} alt="Temperature Field Comparison Across Grids" className="w-full h-auto" />
-  <p className="text-sm text-center py-2 px-4 bg-slate-900/80 text-slate-300">
-    Figure 5: Temperature contours (290 K to 310 K) for Coarse (50x50), Medium (100x100), and Fine (200x200) grids. Notice how thermal stratification sharpens in the core while boundary layers thin against the vertical walls.
-  </p>
-</div>
-
-<div className="my-8 rounded-xl overflow-hidden shadow-lg border border-slate-700/50">
-  <img src={U3PanelImg.src} alt="Velocity Magnitude Comparison Across Grids" className="w-full h-auto" />
-  <p className="text-sm text-center py-2 px-4 bg-slate-900/80 text-slate-300">
-    Figure 6: Velocity magnitude field across the three meshes. The fine grid clearly resolves the distinct high-velocity boundary layer streams along the walls and the relatively stagnant central core.
-  </p>
-</div>
+6. **Asymptotic Ratio (\chi):**
+   - **Formula:** `$\chi = GCI_{32} / (r^p \cdot GCI_{21})$`
+   - **Relevance:** Checks whether the grid triplet is consistent with the asymptotic range. A value far from one, as in the Nusselt result here, prevents an asymptotic-convergence claim.
 
 ---
 
-### 6. Apparent Order ($p$) vs. Formal Theoretical Order ($p_{formal}$)
+#### 4.2 In-Depth Analysis of the Verification Results
 
-In theoretical numerical analysis, the spatial discretization order of the scheme is known as the **formal order** ($p_{formal} = 1$ for first-order upwind, $p_{formal} = 2$ for central differencing or linearUpwind). 
+The current grid sequence is valuable as a diagnostic exercise, not as evidence that the cavity solution is grid independent:
 
-In practical CFD, however, the **observed apparent order** ($p$) often deviates from $p_{formal}$:
-1. **Grid Resolution Regime:** If the mesh is not yet within the asymptotic regime for a localized feature (such as the 4.7 mm boundary layer on a 20 mm grid), the observed order will reflect pre-asymptotic behavior ($p < 1$).
-2. **Global Integrated Quantities:** For integral metrics like $\overline{Nu}$, cancellation of positive and negative errors across the domain can produce apparent super-convergence ($p \approx 3.97$), which collapses towards the true theoretical order as $h \to 0$.
-3. **Boundary Condition Formulation:** Wall gradient approximations (such as one-sided first-order differences at boundary faces) can reduce an interior second-order scheme to first-order near boundaries.
+1. **Mean Nusselt number:** Values increase monotonically from 41.1717 to 58.4341 to 59.5341, but $\chi=15.989$ fails the asymptotic-range check. The reported $\overline{Nu}_{ext}=59.6090$ and $GCI_{fine}=0.16\%$ are conditional script outputs, not verified uncertainty bounds.
+2. **Center temperature:** The values remain close to 300 K, as expected from the symmetric wall temperatures. This agreement for a smooth central quantity does not establish convergence of wall gradients or velocity peaks.
+3. **Horizontal velocity:** The values 0.0451, 0.0226, and 0.0278 m/s are non-monotonic. The reported apparent order and GCI should not be interpreted as proof of first-order asymptotic accuracy.
+4. **Vertical velocity:** The values rise from 0.0854 to 0.1285 to 0.1935 m/s, and the nominal fine-grid GCI is 584.87%. The large variation makes clear that the peak is mesh-sensitive in this sequence. A boundary-layer explanation is plausible but has not been isolated by these calculations.
 
----
-
-### 7. Engineering Takeaways & Best Practices
-
-1. **Always Report GCI with Confidence Intervals:**  
-   Never report a single CFD result as absolute truth. Reporting $\overline{Nu} = 59.53$ with an ASME $GCI_{fine} = \pm 0.16\%$ demonstrates professional verification rigor.
-2. **Medium (100x100) vs Fine (200x200) Efficiency Tradeoff:**  
-   The Medium grid required only **35 seconds** of compute time to achieve within **1.85%** of the fine grid solution (which took **169 seconds**). For engineering parameter studies, the Medium grid represents the optimal cost-accuracy Pareto point.
-3. **Boundary Layer Resolution is Paramount:**  
-   Accurately capturing velocity peaks in buoyancy-driven flows requires boundary layer grading rather than pure uniform refinement. Estimating $\delta \sim L \cdot Ra^{-1/4}$ before creating `blockMeshDict` is crucial.
+For a defensible uncertainty study, first audit the physical setup and quantity extraction, then refine the grids and use a method appropriate to the observed convergence behavior. Do not infer engineering design accuracy from the present table.
 
 ---
 
-### 8. Reproducibility & Automation
+### 5. Key Engineering Conclusions
 
-The entire 3-grid verification pipeline is automated in the repository under `04_mesh_independence_gci/`:
+1. **Do not claim mesh independence from this run.** The Nusselt asymptotic ratio is $\chi=15.989$, and the velocity metrics are strongly grid-sensitive or non-monotonic.
+2. **Use the table to learn the diagnostics.** It shows why small fine/medium changes and apparent orders are not sufficient on their own.
+3. **Next step:** audit the case properties and extraction, add a suitable graded near-wall mesh if required, and rerun with convergence histories and a justified uncertainty analysis.
+
+---
+
+### 6. Reproducibility
+
+The complete 3-grid verification workflow is automated under `04_mesh_independence_gci/`:
 
 ```bash
 # Clone the repository
 git clone https://github.com/martinmat13/OpenFOAM-Differentially-Heated-Cavity.git
 cd OpenFOAM-Differentially-Heated-Cavity/04_mesh_independence_gci
 
-# Run the complete verification study end-to-end
+# Run all 3 grids and generate GCI verification tables and plots
 ./Allrun
 ```
 
-All summary tables and verification figures are automatically extracted and generated into `04_mesh_independence_gci/results/`.
+All verification metrics and comparison figures are saved directly into `04_mesh_independence_gci/results/`.
+
+## References
+
+1. Celik, I. B., Ghia, U., Roache, P. J., Freitas, C. J., Coleman, H., & Raad, P. E. (2008). “Procedure for estimation and reporting of uncertainty due to discretization in CFD applications.” *Journal of Fluids Engineering*, 130(7), 078001. [https://doi.org/10.1115/1.2960953](https://doi.org/10.1115/1.2960953).
+2. Roache, P. J. (1998). *Verification and Validation in Computational Science and Engineering*. Hermosa Publishers.

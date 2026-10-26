@@ -1,0 +1,10 @@
+#!/bin/bash
+cd "${0%/*}" || exit 1
+
+echo "Cleaning all case directories and results in 05_rayleigh_validation_sweep..."
+(cd cases/Ra_1e3 && ./Allclean)
+(cd cases/Ra_1e4 && ./Allclean)
+(cd cases/Ra_1e5 && ./Allclean)
+(cd cases/Ra_1e6 && ./Allclean)
+rm -rf results/*
+echo "All clean!"

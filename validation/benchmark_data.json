@@ -4,11 +4,22 @@
       "author": "De Vahl Davis",
       "year": 1983,
       "title": "Natural Convection of Air in a Square Cavity: A Bench Mark Numerical Solution",
+      "journal": "International Journal for Numerical Methods in Fluids",
+      "volume": 3,
+      "issue": 3,
+      "pages": "249-264",
+      "doi": "10.1002/fld.1650030305",
+      "url": "https://doi.org/10.1002/fld.1650030305",
+      "benchmark_conditions": "Two-dimensional square cavity; differentially heated vertical walls; Pr = 0.71; Ra = 1e3 to 1e6.",
+      "velocity_scale": "alpha/L",
+      "data_provenance": "Tabulated numerical benchmark values transcribed from the cited publication; no digitization.",
+      "data_units": "Ra, Nu_avg, u_max_dimless, v_max_dimless, y_umax, and x_vmax are dimensionless.",
+      "uncertainty": "No statistical uncertainty is attached to individual values in this dataset; consult the cited paper for its accuracy discussion.",
       "data": [
-        {"Ra": 1e3, "Nu_avg": 1.118, "u_max_dimless": 3.649, "v_max_dimless": 3.697},
-        {"Ra": 1e4, "Nu_avg": 2.243, "u_max_dimless": 16.178, "v_max_dimless": 19.617},
-        {"Ra": 1e5, "Nu_avg": 4.519, "u_max_dimless": 34.73, "v_max_dimless": 68.59},
-        {"Ra": 1e6, "Nu_avg": 8.800, "u_max_dimless": 64.63, "v_max_dimless": 219.36}
+        {"Ra": 1e3, "Nu_avg": 1.118, "u_max_dimless": 3.649, "y_umax": 0.813, "v_max_dimless": 3.697, "x_vmax": 0.178},
+        {"Ra": 1e4, "Nu_avg": 2.243, "u_max_dimless": 16.178, "y_umax": 0.823, "v_max_dimless": 19.617, "x_vmax": 0.119},
+        {"Ra": 1e5, "Nu_avg": 4.519, "u_max_dimless": 34.73, "y_umax": 0.855, "v_max_dimless": 68.59, "x_vmax": 0.066},
+        {"Ra": 1e6, "Nu_avg": 8.800, "u_max_dimless": 64.63, "y_umax": 0.850, "v_max_dimless": 219.36, "x_vmax": 0.0379}
       ]
     },
     {

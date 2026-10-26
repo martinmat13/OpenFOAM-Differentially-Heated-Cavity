@@ -1,0 +1,42 @@
+#!/bin/bash
+set -e
+cd "${0%/*}" || exit 1
+
+echo "=============================================================================="
+echo " Starting Rayleigh Number Benchmark Validation Sweep (De Vahl Davis 1983)"
+echo " OpenFOAM-v2512 | buoyantBoussinesqSimpleFoam"
+echo "=============================================================================="
+
+# 1. Ra = 1e3
+echo "------------------------------------------------------------------------------"
+echo " 1/4: Running Ra = 1e3 (Pure Conduction / Weak Convection)"
+echo "------------------------------------------------------------------------------"
+(cd cases/Ra_1e3 && ./Allrun)
+
+# 2. Ra = 1e4
+echo "------------------------------------------------------------------------------"
+echo " 2/4: Running Ra = 1e4 (Laminar Steady Convection Cell)"
+echo "------------------------------------------------------------------------------"
+(cd cases/Ra_1e4 && ./Allrun)
+
+# 3. Ra = 1e5
+echo "------------------------------------------------------------------------------"
+echo " 3/4: Running Ra = 1e5 (Diagonal Core Stratification)"
+echo "------------------------------------------------------------------------------"
+(cd cases/Ra_1e5 && ./Allrun)
+
+# 4. Ra = 1e6
+echo "------------------------------------------------------------------------------"
+echo " 4/4: Running Ra = 1e6 (Thin Boundary Layers & Core Stagnation)"
+echo "------------------------------------------------------------------------------"
+(cd cases/Ra_1e6 && ./Allrun)
+
+# Post-processing and Benchmark Comparison
+echo "=============================================================================="
+echo " Executing Automated Post-Processing & Literature Validation..."
+echo "=============================================================================="
+python3 scripts/postprocess_benchmark_sweep.py
+
+echo "=============================================================================="
+echo " Benchmark Sweep Complete! Results saved in ./results"
+echo "=============================================================================="

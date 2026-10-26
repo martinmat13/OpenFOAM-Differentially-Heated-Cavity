@@ -1,8 +1,8 @@
 # Case 04: Mesh Verification & Grid Convergence Index (GCI) Study
 
-**OpenFOAM CFD | Verification & Validation | ASME V&V 20-2009 Standard**
+**OpenFOAM CFD | Grid Refinement | Richardson Extrapolation | GCI**
 
-> A systematic numerical verification study of the **Differentially Heated Cavity** using Richardson Extrapolation and the Grid Convergence Index (GCI) across three systematically refined mesh levels.
+> A three-grid refinement exercise for the **Differentially Heated Cavity**. The reported outputs are useful for learning the GCI workflow, but the Nusselt result does not pass the study's own asymptotic-range check.
 
 ---
 
@@ -11,11 +11,13 @@
 In computational fluid dynamics (CFD), **verification** answers the fundamental question:
 > *"Are we solving the governing equations correctly and independently of numerical grid resolution?"*
 
-Before any CFD solution can be meaningfully validated against experimental data, the numerical discretization error must be rigorously quantified. Following the **ASME V&V 20-2009 Standard** (*Standard for Verification and Validation in Computational Fluid Dynamics and Heat Transfer*) and the methodology of **Roache (1998)** and **Celik et al. (2008)**, this subproject performs a three-grid convergence analysis to:
+Grid refinement is one component of numerical verification. Following Richardson-extrapolation and GCI practices described by Roache (1998) and Celik et al. (2008), this subproject calculates three-grid metrics to:
 1. Determine the **observed apparent order of convergence ($p$)**.
 2. Estimate the **continuum zero-grid spacing solution ($f_{ext}$)** via Richardson extrapolation.
-3. Establish 95% confidence numerical uncertainty bands via the **Grid Convergence Index ($GCI$)**.
-4. Confirm whether the numerical solutions reside within the **asymptotic range of convergence**.
+3. Calculate a nominal **Grid Convergence Index ($GCI$)**.
+4. Check whether the values are consistent with the **asymptotic range of convergence**.
+
+The computed metrics must be interpreted using that final check. The Nusselt asymptotic ratio is $\chi=15.989$, far from unity, so this dataset does not establish an asymptotic GCI uncertainty estimate. The label “verification exercise” describes the intent and workflow; it is not a claim that every quantity is verified.
 
 ---
 
@@ -135,9 +137,9 @@ python3 scripts/postprocess_gci.py
 
 ---
 
-## 6. Quantitative Verification Results
+## 6. Reported Grid-Refinement Calculations
 
-Executing the automated verification pipeline produces the following ASME V&V 20 metrics:
+The post-processing pipeline reports the following values. The table is retained as the output of the current calculation; its GCI and extrapolation columns are not equally interpretable for all quantities.
 
 | Variable | Unit | Coarse (50x50) | Medium (100x100) | Fine (200x200) | Extrapolated ($h \to 0$) | Apparent Order ($p$) | $e_a^{21}$ (%) | $GCI_{fine}$ (%) | Asymptotic Ratio ($\chi$) |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
@@ -148,20 +150,21 @@ Executing the automated verification pipeline produces the following ASME V&V 20
 | **Dimensionless $u^*$** | [-] | 2132.75 | 1069.50 | 1313.94 | **1313.94** | 1.00 | 18.60% | **23.25%** | 1.000 |
 | **Center Temperature ($T_{center}$)** | [K] | 299.8630 | 300.0360 | 300.0150 | **300.0150** | 1.00 | 0.01% | **0.01%** | 1.000 |
 
-### Key Physical & Numerical Insights:
-1. **Asymptotic Convergence of Heat Transfer:**
-   The average Nusselt number demonstrates remarkable grid independence, shifting by only $1.85\%$ between the Medium and Fine meshes ($58.43 \to 59.53$), with a Fine Grid Convergence Index of $GCI_{fine} = 0.16\%$. The continuum extrapolated Nusselt number is estimated at $\overline{Nu}_{ext} = 59.61 \pm 0.10$.
-2. **Boundary Layer Resolution Sensitivity:**
-   At $Ra \approx 2 \times 10^9$, the natural convection boundary layer thickness is approximately $\delta \sim L \cdot Ra^{-1/4} \approx 4.7$ mm.
-   - On the coarse grid ($h = 20$ mm), the boundary layer is severely under-resolved and artificially diffused into the bulk.
-   - On the medium grid ($h = 10$ mm), the convective updraft begins to steepen.
-   - On the fine grid ($h = 5$ mm), the cell height approaches the physical boundary layer scale, yielding the characteristic high-velocity near-wall jet peak ($v_{max} = 0.1935$ m/s).
-3. **Core Symmetry and Temperature Preservation:**
-   The cavity core temperature rapidly converges to $300.015$ K ($e_a^{21} = 0.01\%$), perfectly preserving anti-symmetric thermal conduction and stratification.
+### Interpretation and limitations
 
----
+1. **Nusselt refinement is monotonic but not demonstrably asymptotic.** The reported values increase from 41.1717 to 58.4341 to 59.5341. The fine/medium difference is 1.85%, and the script calculates $GCI_{fine}=0.16\%$ and $\overline{Nu}_{ext}=59.6090$. However, the reported $\chi=15.989$ is not approximately one. Therefore, the extrapolation and GCI must not be presented as a validated uncertainty interval or proof of grid independence. The apparent order alone does not supersede this failed check.
+2. **Velocity metrics are not converged by this calculation.** The vertical-velocity extrapolation is 1.0989 m/s despite a finest-grid value of 0.1935 m/s; its reported GCI is 584.87%. The horizontal-velocity values are non-monotonic (0.0451, 0.0226, 0.0278 m/s). These values show strong sensitivity to the grid and/or extraction, not reliable continuum estimates.
+3. **The center temperature is insensitive in the reported sequence.** Its values vary by only a small fraction of a kelvin, but that agreement does not establish convergence of gradients, wall heat flux, or velocity peaks.
+4. **Treat the boundary-layer interpretation as qualitative.** The report quotes a scale $\delta\sim L Ra^{-1/4}$ at $Ra\approx2\times10^9$, but the three-grid results alone do not quantify boundary-layer thickness or demonstrate that it is resolved.
 
-## 7. Author
+Before claiming formal verification, check the input conditions and mesh hierarchy, ensure quantities of interest are extracted consistently, obtain monotonic/asymptotic behavior where appropriate, and rerun the analysis with a justified uncertainty method. These results are separate from and cannot supply a grid-error estimate for the $Ra=10^3$–$10^6$ sweep.
+
+## 7. References
+
+1. Celik, I. B., Ghia, U., Roache, P. J., Freitas, C. J., Coleman, H., & Raad, P. E. (2008). “Procedure for estimation and reporting of uncertainty due to discretization in CFD applications.” *Journal of Fluids Engineering*, 130(7), 078001. [https://doi.org/10.1115/1.2960953](https://doi.org/10.1115/1.2960953).
+2. Roache, P. J. (1998). *Verification and Validation in Computational Science and Engineering*. Hermosa Publishers.
+3. ASME. *V&V 20: Standard for Verification and Validation in Computational Fluid Dynamics and Heat Transfer*. Consult the applicable edition for formal engineering work.
+
+## Author
 **Martin Mathew**  
 Computational Engineering | CFD | OpenFOAM | Thermal Verification
-
